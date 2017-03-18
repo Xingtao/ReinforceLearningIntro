@@ -21,6 +21,7 @@ library
                       ,normaldistribution >= 1.1.0.3
                       ,easyplot >= 1.0
                       ,configurator >= 0.3.0.0
+                      ,HTF >= 0.13.1.0
   default-language:    Haskell2010
 
 executable RLHask-exe
