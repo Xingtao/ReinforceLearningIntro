@@ -15,9 +15,9 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     C2-1
-  build-depends:       base >= 4.7 && < 5,
-                       chart >= 1.8.2
+  exposed-modules:     Charpter2Bandit
+  build-depends:       base >= 4.7 && < 5
+                      ,chart >= 1.8.2
   default-language:    Haskell2010
 
 executable RLHask-exe
