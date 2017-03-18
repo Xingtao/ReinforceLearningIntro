@@ -17,8 +17,10 @@ library
   hs-source-dirs:      src
   exposed-modules:     Charpter2Bandit
   build-depends:       base >= 4.7 && < 5
+                      ,lens >= 4.14
                       ,normaldistribution >= 1.1.0.3
                       ,easyplot >= 1.0
+                      ,configurator >= 0.3.0.0
   default-language:    Haskell2010
 
 executable RLHask-exe
@@ -32,7 +34,7 @@ executable RLHask-exe
 test-suite RLHask-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  main-is:             Test2-1.hs
+  main-is:             TestChapter2Bandit.hs
   build-depends:       base
                      , RLHask
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
