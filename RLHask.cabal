@@ -17,7 +17,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     Charpter2Bandit
   build-depends:       base >= 4.7 && < 5
-                      ,chart >= 1.8.2
+                      ,normaldistribution >= 1.1.0.3
+                      ,easyplot >= 1.0
   default-language:    Haskell2010
 
 executable RLHask-exe

@@ -1,4 +1,4 @@
-module C2_1
+module Charpter2Bandit
     ( someFunc
     ) where
 

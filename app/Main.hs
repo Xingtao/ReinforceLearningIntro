@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Charpter2Bandit
 
 main :: IO ()
 main = someFunc
