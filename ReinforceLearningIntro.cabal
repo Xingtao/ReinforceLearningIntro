@@ -1,14 +1,14 @@
-name:                RLHask
+name:                ReinforceLearningIntro
 version:             0.1.0.0
 -- synopsis:
 -- description:
-homepage:            https://github.com/peng.pxt@gmail.com/RLHask#readme
+homepage:            https://github.com/Xingtao/ReinforceLearningIntro
 license:             BSD3
 license-file:        LICENSE
-author:              xt
-maintainer:          xt@xt.com
-copyright:           xt
-category:            RL
+author:              Xingtao
+maintainer:          peng.pxt@gmail.com
+copyright:           Xingtao
+category:            Reinforcement Learning
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
@@ -19,20 +19,11 @@ library
   build-depends:       base >= 4.7 && < 5
                       ,lens >= 4.14
                       ,normaldistribution >= 1.1.0.3
-                      ,easyplot >= 1.0
                       ,configurator >= 0.3.0.0
                       ,HTF >= 0.13.1.0
   default-language:    Haskell2010
 
-executable RLHask-exe
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base
-                     , RLHask
-  default-language:    Haskell2010
-
-test-suite RLHask-test
+test-suite RL-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             TestChapter2Bandit.hs
@@ -40,7 +31,3 @@ test-suite RLHask-test
                      , RLHask
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
-
-source-repository head
-  type:     git
-  location: https://github.com/peng.pxt@gmail.com/RLHask
