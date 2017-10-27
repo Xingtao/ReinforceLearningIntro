@@ -12,20 +12,21 @@ data Bandit = Bandit {
     ,kArms :: Int
     ,qActions :: [Double]
     ,nActions :: [Int]
-    ,actionRewards :: [[Double]]
+    ,actionRewards :: [Double]
     }
 
-mklenses ''Bandit
+-- mklenses ''Bandit
 
-generateBandit :: Int -> [[Dboule]] -> IO Bandit
+generateBandit :: Int -> [[Double]] -> IO Bandit
 generateBandit k rewards =
   pure Bandit {
-   kArms = k
-  ,qActions = take kArms (repeat 0.0)
-  ,nActions = take kArms (repeat 0)
-  ,actionRewards
-  }
+         greedyEpsilon = 0.1
+        ,kArms = k
+        ,qActions = take k (repeat 0.0)
+        ,nActions = take k (repeat 0)
+        ,actionRewards = []
+       }
 
-actionValues :: Int -> Int -> IO Double
-actionValues k n avs | k < kArms =  avs !! k !! n
-                     | otherwise = error ("kArms = " ++ show kArms ++ ", but index " ++ show k)
+actionValues :: Int -> [Double] -> Double
+actionValues k ar | k < (length ar) =  ar !! k
+                  | otherwise = error ("kArms = " ++ show (length ar) ++ ", but index " ++ show k)
