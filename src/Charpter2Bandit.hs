@@ -1,21 +1,23 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Charpter2Bandit
     ( Bandit(..)
     , generateBandit
     ) where
 
 import Control.Lens
+import Control.Monad.Random ( MonadRandom )
 import Data.List(take, repeat)
-import Data.Random.Normal
+import Language.Haskell.TH
 
 data Bandit = Bandit {
      greedyEpsilon :: Double
     ,kArms :: Int
     ,qActions :: [Double]
     ,nActions :: [Int]
-    ,actionRewards :: [Double]
     }
 
--- mklenses ''Bandit
+makeLenses ''Bandit
 
 generateBandit :: Int -> [[Double]] -> IO Bandit
 generateBandit k rewards =
@@ -24,7 +26,6 @@ generateBandit k rewards =
         ,kArms = k
         ,qActions = take k (repeat 0.0)
         ,nActions = take k (repeat 0)
-        ,actionRewards = []
        }
 
 actionValues :: Int -> [Double] -> Double
