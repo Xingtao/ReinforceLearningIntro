@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Charpter2Bandit
+module Chapter2Bandit
     ( Bandit(..)
     , generateBandit
     ) where
