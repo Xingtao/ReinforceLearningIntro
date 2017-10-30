@@ -4,10 +4,23 @@
 
 module Utils where
 
-import System.Random
-import Data.List
 import Control.Monad
+import Data.List
 
+import Data.Random
+import Data.Random.Distribution
+import Data.Random.Source.IO
+
+generateRandomList :: (Num a) => Int -> RVar a -> IO [a]
+generateRandomList quatity rvar = go 0
+  where 
+  go count | count >= quatity = pure []
+           | otherwise = sample rvar >>= \ x -> (x:) <$> go (count + 1)
+
+
+
+{-
+import System.Random
 -- 'Psuedo' Random Distributions
 uniforms :: (Random a, Num a) => [a]
 uniforms = randoms (mkStdGen 42)
@@ -34,3 +47,4 @@ boxMullers _ = []
 normals = boxMullers $ randoms (mkStdGen 42)
 -- uses the supplied (mean, standard deviation).
 normals' (mean, sigma) g = map (\x -> x * sigma + mean) $ normals
+-}
