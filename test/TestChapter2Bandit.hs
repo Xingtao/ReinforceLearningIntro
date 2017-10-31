@@ -22,15 +22,16 @@ drawFigure2_1 kArms = do
   kArmDatas <- mapM (generateRandomList 200) rvars
   let figure2_1 = mp % (violinplot kArmDatas @@ [o2 "showmeans" True, o2 "showmedians" True])
                      % xlabel "Action"
-                     % ylabel "Reward" 
-  code figure2_1 >>= print
+                     % ylabel "Reward"
+                     % title "Figure 2-1"
+  -- code figure2_1 >>= print
   onscreen figure2_1
-  threadDelay 1000
   pure ()  
- 
+
+
 testChapter2 :: IO ()
 testChapter2 = do
   print "Bandit Experiment Starting, will take several minutes "
   -- readConfigureFile  
-  drawFigure2_1 10
-  pure ()
+  forkIO $ drawFigure2_1 10
+  threadDelay 1000000 >> pure ()
