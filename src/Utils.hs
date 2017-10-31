@@ -19,9 +19,13 @@ generateRandomList quatity rvar = go 0
   go count | count >= quatity = pure []
            | otherwise = sample rvar >>= \ x -> (x:) <$> go (count + 1)
 
--- index and max value
+-- | index with max value in a list
 argmaxWithIndex :: (Ord a) => [(Int, a)] -> (Int, a)
 argmaxWithIndex = maximumBy (comparing snd)
+
+
+
+
 
 {-
 import System.Random
