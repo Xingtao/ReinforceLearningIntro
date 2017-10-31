@@ -29,6 +29,7 @@ data SampleAverageBandit = SampleAverageBandit {
     -- if > 0, use constant stepSize means non-stationary env, weight recent reward more.
     ,_stepSize :: Double
     ,_totalReward :: Double
+    ,_totalRuns :: Int
     -- ramdoms
     ,_srcRVars :: [RVar Double]
     ,_greedyEpsilon :: RVar Bool
@@ -51,11 +52,11 @@ takeOneAction actionN saBandit = do
                   & (qValues . element actionN .~ newValue)
                   & (totalReward +~ reward)
 
-doSampleAverage :: Int -> SampleAverageBandit -> IO [Double]
-doSampleAverage totalRun saBandit = go 1 saBandit
+doSampleAverage :: SampleAverageBandit -> IO [Double]
+doSampleAverage saBandit = go 1 saBandit
   where
   go count saBandit
-    | count > totalRun = pure []
+    | count > (_totalRuns saBandit) = pure []
     | otherwise = do
         bExplore <- sample (_greedyEpsilon saBandit)
         actionN <- case bExplore of

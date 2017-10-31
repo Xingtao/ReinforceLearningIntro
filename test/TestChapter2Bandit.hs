@@ -27,11 +27,12 @@ import Chapter2Bandit
 mkSampleAverageBandit :: Config -> [RVar Double] -> IO SampleAverageBandit
 mkSampleAverageBandit config srcRVars = do
   k <- require config "kArms"
+  loops <- require config "totalRuns"
   ge <- require config "greedyEpsilon"
   initValue <- require config "sampleAverage.initialOptimalValue"
   stepValue <- require config "sampleAverage.stepSize"
-  pure $ SampleAverageBandit k (take k (repeat initValue))
-                             (take k (repeat 0)) stepValue 0.0 srcRVars (bernoulli ge)
+  pure $ SampleAverageBandit k (take k (repeat initValue)) (take k (repeat 0)) 
+                             stepValue 0.0 loops srcRVars (bernoulli ge)
 
 initSrcDataDistribution :: Int -> IO [RVar Double]
 initSrcDataDistribution karm =
@@ -54,10 +55,13 @@ drawFigure2_1 karm kArmRVars = do
   pure ()
 
 drawFigure2_2 :: SampleAverageBandit -> [Double] -> IO ()
-drawFigure2_2 saBandit averageRewards = do  
-  -- onscreen figure2_2
-  pure ()
-  
+drawFigure2_2 saBandit averageRewards = do
+  let figure2_2 = mp % (plot [0 .. (_totalRuns saBandit - 1)] averageRewards)
+                     % xlabel "Step"
+                     % ylabel "Optiomal Reward"
+                     % title "Figure 2-2"  
+  onscreen figure2_2
+  pure ()  
 
 ------------------------------------------------------------------------------------------
 
@@ -71,10 +75,9 @@ testChapter2 configPath = do
   print "Bandit Experiment Starting, will take several minutes "
   saBandit <- mkSampleAverageBandit config srcDataRVars
 
-  averageRewards <- doSampleAverage 500 saBandit
+  averageRewards <- doSampleAverage saBandit
   drawFigure2_1 10 srcDataRVars
-  -- print averageRewards
-
   drawFigure2_2 saBandit averageRewards
-
+  -- print averageRewards
+  
   threadDelay 2000000 >> pure ()
