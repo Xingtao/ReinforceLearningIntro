@@ -1,7 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes #-}
 
 module Chapter2Bandit
-    ( Bandit(..)
+    ( SampleAverageBandit(..)
     , generateBandit
     ) where
 
@@ -10,24 +10,20 @@ import Control.Monad.Random ( MonadRandom )
 import Data.List(take, repeat)
 import Language.Haskell.TH
 
-data Bandit = Bandit {
-     greedyEpsilon :: Double
-    ,kArms :: Int
-    ,qActions :: [Double]
-    ,nActions :: [Int]
+data SampleAverageBandit = SampleAverageBandit {
+     _kArms :: Int
+    ,_greedyEpsilon :: Double
+    ,_qValues :: [Double]
+    ,_nActions :: [Int]
+    ,_stepSize :: Int -> Double
     }
 
-makeLenses ''Bandit
+makeLenses ''SampleAverageBandit
 
-generateBandit :: Int -> [[Double]] -> IO Bandit
-generateBandit k rewards =
-  pure Bandit {
-         greedyEpsilon = 0.1
-        ,kArms = k
-        ,qActions = take k (repeat 0.0)
-        ,nActions = take k (repeat 0)
-       }
-
+generateBandit :: Int -> Double -> [Double] -> Double -> SampleAverageBandit
+generateBandit k ge initRewards stepValue =
+  SampleAverageBandit k ge initRewards (take k (repeat 0)) stepValue
+  
 actionValues :: Int -> [Double] -> Double
 actionValues k ar | k < (length ar) =  ar !! k
                   | otherwise = error ("kArms = " ++ show (length ar) ++ ", but index " ++ show k)

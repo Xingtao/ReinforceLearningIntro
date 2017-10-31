@@ -6,18 +6,22 @@ module Utils where
 
 import Control.Monad
 import Data.List
+import Data.Ord (comparing)
 
 import Data.Random
 import Data.Random.Distribution
 import Data.Random.Source.IO
 
+-- | generate a list of values via a provided random distribution
 generateRandomList :: (Num a) => Int -> RVar a -> IO [a]
 generateRandomList quatity rvar = go 0
   where 
   go count | count >= quatity = pure []
            | otherwise = sample rvar >>= \ x -> (x:) <$> go (count + 1)
 
-
+-- index and max value
+argmaxWithIndex :: (Ord a) => [(Int, a)] -> (Int, a)
+argmaxWithIndex = maximumBy (comparing snd)
 
 {-
 import System.Random
