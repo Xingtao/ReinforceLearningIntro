@@ -7,14 +7,15 @@ module Chapter2Bandit
     ) where
 
 import Control.Monad
-import Control.Lens (makeLenses, over, element, (+~), (&), (.~))
+import Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import Data.List(take, repeat)
-import Language.Haskell.TH
+import Data.IORef
 
 import Data.Random
 import Data.Random.Distribution
 import Data.Random.Distribution.Uniform
 import Data.Random.Source.IO
+import Language.Haskell.TH
 
 import Utils
 
@@ -31,6 +32,7 @@ data SampleAverageBandit = SampleAverageBandit {
     ,_stepSize :: Double
     ,_totalReward :: Double
     ,_totalStep :: Int
+    ,_bestTakes :: [Double]
     -- ramdoms
     ,_srcRVars :: [RVar Double]
     ,_greedyEpsilonRVar :: RVar Bool
@@ -42,7 +44,7 @@ instance Show SampleAverageBandit where
   show saBandit = (show $ _kArms saBandit) ++ " arms, stepSize " ++ (show $ _stepSize saBandit) ++
                   ", greedyEpsilon: " ++ (show $ _greedyEpsilon saBandit)
 
-takeOneAction :: Bool -> SampleAverageBandit -> IO (Double, SampleAverageBandit)
+takeOneAction :: Bool -> SampleAverageBandit -> IO SampleAverageBandit
 takeOneAction bExplore saBandit = do
   let curBestActionIdx = fst $ argmaxWithIndex (zip [0..] (_qValues saBandit))
   actionN <- case bExplore of
@@ -57,17 +59,23 @@ takeOneAction bExplore saBandit = do
       oldValue = (_qValues saBandit) !! actionN
       newValue | updateStepSize < 0 = oldValue + (reward - oldValue) / (fromIntegral $ oldActionN + 1)
                | otherwise = oldValue + (reward - oldValue) / updateStepSize
-  pure $ (bestTake, saBandit & (nActions . element actionN +~ 1)
-                             & (qValues . element actionN .~ newValue)
-                             & (totalReward +~ reward)
+      -- bestTakeList = _bestTakes saBandit
+  pure $ (saBandit & (nActions . element actionN +~ 1)
+                   & (qValues . element actionN .~ newValue)
+                   & (totalReward +~ reward)
+                   & (bestTakes %~ ( ++ [bestTake]))
          )
 
-doSampleAverage :: SampleAverageBandit -> IO [(Double, Double)]
-doSampleAverage saBandit = go 1 saBandit
+doSampleAverage :: SampleAverageBandit -> IO (SampleAverageBandit, [Double])
+doSampleAverage saBandit = do
+  updatedRef <- newIORef saBandit
+  averageRewards <- go 1 updatedRef saBandit
+  saBandit' <- readIORef updatedRef
+  pure (saBandit', averageRewards)
   where
-  go count saBandit
-    | count > (_totalStep saBandit) = pure []
+  go count updatedRef saBandit
+    | count > (_totalStep saBandit) = writeIORef updatedRef saBandit >> pure []
     | otherwise = do
         bExplore <- sample (_greedyEpsilonRVar saBandit)
-        (bestTake, newSA) <- takeOneAction bExplore saBandit
-        ( (bestTake, (_totalReward newSA) / (fromIntegral count)) :) <$> go (count + 1) newSA
+        newSA <- takeOneAction bExplore saBandit
+        ( (_totalReward newSA) / (fromIntegral count) :) <$> go (count + 1) updatedRef newSA

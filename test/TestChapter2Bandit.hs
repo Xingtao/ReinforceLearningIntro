@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE BangPatterns         #-}
 
 module TestChapter2Bandit (
        testChapter2
@@ -45,7 +46,7 @@ mkSampleAverageBandits config srcRVars = do
   where
   mkOneBandit k steps ge initValue stepValue = 
     SampleAverageBandit k (take k (repeat initValue)) (take k (repeat 0)) ge
-                        stepValue 0.0 steps srcRVars (bernoulli ge)
+                        stepValue 0.0 steps [] srcRVars (bernoulli ge)
 
 initSrcDataDistribution :: Int -> IO [RVar Double]
 initSrcDataDistribution karm = -- pure $ take karm (repeat stdNormal)
@@ -67,13 +68,19 @@ drawFigure2_1 karm = do
   onscreen figure2_1
   pure ()
 
-drawFigure2_2 :: Int -> [Double]-> [[Double]] -> IO ()
-drawFigure2_2 totalStep greedys averageRewards = do
+drawFigure2_2 :: Int -> [Double] -> [[Double]] -> [[Double]] -> IO ()
+drawFigure2_2 totalStep greedys averageRewards bestActions = do
   let curves = foldl goPlot mp (zip greedys averageRewards)
-      figure2_2 = mp % curves
+      bestPercentages = foldl goPlotPercent mp (zip greedys bestActions)
+      figure2_2 = mp % subplots
+                     % curves
                      % xlabel "Step"
                      % ylabel "Optiomal Reward"
                      % title "Figure 2-2: Average Sample Different Paramters Comparison"
+                     % subplots
+                     % bestPercentages
+                     % xlabel "Step"
+                     % ylabel "Best Actions"
 
   onscreen figure2_2
   pure ()
@@ -82,7 +89,11 @@ drawFigure2_2 totalStep greedys averageRewards = do
   goPlot acc (greedy, averageReward) =
     acc % plot [0 .. (totalStep - 1)] averageReward @@ [o2 "label" ("epsilon="++(show $ greedy))]
         % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
-
+  goPlotPercent :: Matplotlib -> (Double, [Double]) -> Matplotlib
+  goPlotPercent acc (greedy, bestTakes) =
+    acc % plot [0 .. 1] bestTakes @@ [o2 "label" ("epsilon="++(show $ greedy))]
+        % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+  
 ------------------------------------------------------------------------------------------
 
 testChapter2 :: FilePath -> IO ()
@@ -105,9 +116,14 @@ doSampleAverageTest config = do
   -- for drawing
   (ges :: [Double]) <- require config "sampleAverage.greedyEpsilons"
   -- average all: TODO here
-  (bestTaskList, averageRewardsList) <- replicateM totalBandits (LA.fromLists <$> goOneRun karm config)
+  results <- replicateM totalBandits (goOneRun karm config)
+  print "Get results"
+  -- TODO: the following code take too long
+  let !bestActions = map (LA.fromLists . (map (_bestTakes . fst))) results
+      !bestActions' = LA.toLists $ (sum bestActions) / (fromIntegral totalBandits)
+      !averageRewardsList = map (LA.fromLists . map snd) results
   let !averageRewards = LA.toLists $ (sum averageRewardsList) / (fromIntegral totalBandits)
-  drawFigure2_2 totalStep ges averageRewards
+  drawFigure2_2 totalStep ges averageRewards bestActions'
   pure ()
 
   where
