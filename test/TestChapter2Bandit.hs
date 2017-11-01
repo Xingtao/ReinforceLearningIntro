@@ -1,5 +1,6 @@
-{-# LANGUAGE ExtendedDefaultRules, ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE FlexibleContexts     #-}
 
 module TestChapter2Bandit (
        testChapter2
@@ -24,15 +25,19 @@ import Chapter2Bandit
 ------------------------------------------------------------------------------------------
 -- initialize helpers
 
-mkSampleAverageBandit :: Config -> [RVar Double] -> IO SampleAverageBandit
-mkSampleAverageBandit config srcRVars = do
+mkSampleAverageBandits :: Config -> [RVar Double] -> IO [SampleAverageBandit]
+mkSampleAverageBandits config srcRVars = do
   k <- require config "kArms"
   loops <- require config "totalRuns"
-  ge <- require config "greedyEpsilon"
-  initValue <- require config "sampleAverage.initialOptimalValue"
-  stepValue <- require config "sampleAverage.stepSize"
-  pure $ SampleAverageBandit k (take k (repeat initValue)) (take k (repeat 0)) 
-                             stepValue 0.0 loops srcRVars (bernoulli ge)
+  -- sample average method specific parameters
+  ges <- require config "sampleAverage.greedyEpsilons"
+  initValues <- require config "sampleAverage.initialOptimalValues"
+  stepValues <- require config "sampleAverage.stepSizes"
+  pure $ zipWith3 (mkOneBandit k loops) ges initValues stepValues
+  where
+  mkOneBandit k loops ge initValue stepValue = 
+    SampleAverageBandit k (take k (repeat initValue)) (take k (repeat 0)) ge
+                        stepValue 0.0 loops srcRVars (bernoulli ge)
 
 initSrcDataDistribution :: Int -> IO [RVar Double]
 initSrcDataDistribution karm =
@@ -54,14 +59,20 @@ drawFigure2_1 karm kArmRVars = do
   onscreen figure2_1
   pure ()
 
-drawFigure2_2 :: SampleAverageBandit -> [Double] -> IO ()
-drawFigure2_2 saBandit averageRewards = do
-  let figure2_2 = mp % (plot [0 .. (_totalRuns saBandit - 1)] averageRewards)
+drawFigure2_2 :: [SampleAverageBandit] -> [[Double]] -> IO ()
+drawFigure2_2 saBandits averageRewards = do
+  let curves = foldl goPlot mp (zip saBandits averageRewards)
+      figure2_2 = mp % curves
                      % xlabel "Step"
                      % ylabel "Optiomal Reward"
-                     % title "Figure 2-2"  
+                     % title "Figure 2-2"      
   onscreen figure2_2
-  pure ()  
+  pure ()
+  where
+  goPlot :: Matplotlib -> (SampleAverageBandit, [Double]) -> Matplotlib
+  goPlot acc (saBandit, averageReward) =
+    acc % plot [0 .. (_totalRuns saBandit - 1)] averageReward @@ [o2 "label" ("epsilon="++(show $ _greedyEpsilon saBandit))]
+        % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
 
 ------------------------------------------------------------------------------------------
 
@@ -73,11 +84,12 @@ testChapter2 configPath = do
   srcDataRVars <- initSrcDataDistribution 10
   
   print "Bandit Experiment Starting, will take several minutes "
-  saBandit <- mkSampleAverageBandit config srcDataRVars
+  saBandits <- mkSampleAverageBandits config srcDataRVars
+  print saBandits
 
-  averageRewards <- doSampleAverage saBandit
+  averageRewards <- mapM doSampleAverage saBandits
   drawFigure2_1 10 srcDataRVars
-  drawFigure2_2 saBandit averageRewards
+  drawFigure2_2 saBandits averageRewards
   -- print averageRewards
   
   threadDelay 2000000 >> pure ()

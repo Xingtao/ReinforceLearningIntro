@@ -25,6 +25,7 @@ data SampleAverageBandit = SampleAverageBandit {
      _kArms :: Int
     ,_qValues :: [Double]
     ,_nActions :: [Int]
+    ,_greedyEpsilon :: Double
     -- if < 0, use N(A), then it is stationary;
     -- if > 0, use constant stepSize means non-stationary env, weight recent reward more.
     ,_stepSize :: Double
@@ -32,13 +33,14 @@ data SampleAverageBandit = SampleAverageBandit {
     ,_totalRuns :: Int
     -- ramdoms
     ,_srcRVars :: [RVar Double]
-    ,_greedyEpsilon :: RVar Bool
+    ,_greedyEpsilonRVar :: RVar Bool
     }
 
 makeLenses ''SampleAverageBandit
 
 instance Show SampleAverageBandit where
-  show saBandit = (show $ _kArms saBandit) ++ " arms, stepSize " ++ (show $ _stepSize saBandit)
+  show saBandit = (show $ _kArms saBandit) ++ " arms, stepSize " ++ (show $ _stepSize saBandit) ++
+                  ", greedyEpsilon: " ++ (show $ _greedyEpsilon saBandit)
 
 takeOneAction :: Int -> SampleAverageBandit -> IO SampleAverageBandit
 takeOneAction actionN saBandit = do  
@@ -58,7 +60,7 @@ doSampleAverage saBandit = go 1 saBandit
   go count saBandit
     | count > (_totalRuns saBandit) = pure []
     | otherwise = do
-        bExplore <- sample (_greedyEpsilon saBandit)
+        bExplore <- sample (_greedyEpsilonRVar saBandit)
         actionN <- case bExplore of
                      True -> sample (randomElement [0..((_kArms saBandit) - 1) ])
                      False -> pure . fst $ argmaxWithIndex (zip [0..] (_qValues saBandit))
