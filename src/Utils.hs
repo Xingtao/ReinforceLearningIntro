@@ -24,9 +24,6 @@ argmaxWithIndex :: (Ord a) => [(Int, a)] -> (Int, a)
 argmaxWithIndex = maximumBy (comparing snd)
 
 
-
-
-
 {-
 import System.Random
 -- 'Psuedo' Random Distributions
