@@ -33,24 +33,9 @@ import Chapter2Bandit
 
 ------------------------------------------------------------------------------------------
 -- initialize helpers
-
-mkSampleAverageBandits :: Config -> [RVar Double] -> IO [SampleAverageBandit]
-mkSampleAverageBandits config srcRVars = do
-  k <- require config "kArms"
-  steps <- require config "totalStep"  
-  -- sample average method specific parameters
-  ges <- require config "sampleAverage.greedyEpsilons"
-  initValues <- require config "sampleAverage.initialOptimalValues"
-  stepValues <- require config "sampleAverage.stepSizes"
-  pure $ zipWith3 (mkOneBandit k steps) ges initValues stepValues
-  where
-  mkOneBandit k steps ge initValue stepValue = 
-    SampleAverageBandit k (take k (repeat initValue)) (take k (repeat 0)) ge
-                        stepValue 0.0 steps [] srcRVars (bernoulli ge)
-
 initSrcDataDistribution :: Int -> IO [RVar Double]
-initSrcDataDistribution karm = -- pure $ take karm (repeat stdNormal)
-  -- true reward
+initSrcDataDistribution karm = 
+  -- pure $ take karm (repeat stdNormal)
   map (flip normal 1.0) <$> generateRandomList karm stdNormal
   -- map (flip normal 1.0) <$> generateRandomList karm (uniform (-1.0) 1.0)
 
@@ -90,8 +75,8 @@ drawFigure2_2 totalStep greedys averageRewards bestActions = do
     acc % plot [0 .. (totalStep - 1)] averageReward @@ [o2 "label" ("epsilon="++(show $ greedy))]
         % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
   goPlotPercent :: Matplotlib -> (Double, [Double]) -> Matplotlib
-  goPlotPercent acc (greedy, bestTakes) =
-    acc % plot [0 .. 1] bestTakes @@ [o2 "label" ("epsilon="++(show $ greedy))]
+  goPlotPercent acc (greedy, bestAction) =
+    acc % plot [0..length bestAction-1] bestAction @@ [o2 "label" ("epsilon="++(show $ greedy))]
         % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
   
 ------------------------------------------------------------------------------------------
@@ -101,32 +86,52 @@ testChapter2 configPath = do
   print "Bandit Experiment Starting, will take several minutes "
   -- readConfigureFile
   (config, _) <- autoReload autoConfig [Required configPath]
-
-  karm <- require config "kArms"  
+  karm <- require config "kArms"
   drawFigure2_1 karm
   -- sample average experiment
   doSampleAverageTest config
   threadDelay 2000000 >> pure ()
 
+
+-- | Sample Average Method: compare different epsilons, different initial values,
+--   also non-stationary (const step size, weight recent reward more) and stationary environment. 
 doSampleAverageTest :: Config -> IO ()
 doSampleAverageTest config = do
+  -- read all sample average related params
   karm <- require config "kArms"
   (totalStep :: Int) <- require config "totalStep"
   (totalBandits :: Int) <- require config "sampleAverage.totalBandits"
-  -- for drawing
   (ges :: [Double]) <- require config "sampleAverage.greedyEpsilons"
-  -- average all: TODO here
-  results <- replicateM totalBandits (goOneRun karm config)
+  (initValues :: [Double]) <- require config "sampleAverage.initialOptimalValues"
+  (stepValues :: [Double]) <- require config "sampleAverage.stepSizes"
+  let arrParams = zip3 ges initValues stepValues
+  -- [(Vector Double, Vector Double)]
+  results <- mapM (\ (ge, initValue, stepVaue) -> 
+                     foldM (goOneRun karm totalStep ge initValue stepVaue)
+                           (LA.fromList $ take totalBandits (repeat 0.0),
+                            LA.fromList $ take totalBandits (repeat 0.0))
+                           [1..totalBandits])
+                  arrParams
   print "Get results"
-  -- TODO: the following code take too long
-  let !bestActions = map (LA.fromLists . (map (_bestTakes . fst))) results
-      !bestActions' = LA.toLists $ (sum bestActions) / (fromIntegral totalBandits)
-      !averageRewardsList = map (LA.fromLists . map snd) results
-  let !averageRewards = LA.toLists $ (sum averageRewardsList) / (fromIntegral totalBandits)
-  drawFigure2_2 totalStep ges averageRewards bestActions'
+  let (averageRewards, bestActions) =
+         foldl (\ (acc1, acc2) (r, a) ->
+                 ((LA.toList $ (r / fromIntegral totalBandits)) : acc1,
+                  (LA.toList $ (a / fromIntegral totalBandits)) : acc2)
+               ) ([], []) results
+  -- draw it
+  drawFigure2_2 totalStep ges averageRewards bestActions
+  threadDelay 2000000 >> pure ()  
   pure ()
 
   where
-  goOneRun karm config =
-    initSrcDataDistribution karm >>=
-      mkSampleAverageBandits config >>= mapM doSampleAverage
+  goOneRun :: Int -> Int -> Double -> Double -> Double ->
+              (Vector Double, Vector Double) -> Int -> IO (Vector Double, Vector Double)
+  goOneRun karm totalStep ge initValue stepValue (accBests, accRewards) _ = do
+    (rewards, bests) <- mkSampleAverageBandit karm totalStep ge initValue stepValue >>= doSampleAverage
+    pure (LA.fromList rewards + accRewards, LA.fromList bests + accBests)
+
+  mkSampleAverageBandit :: Int -> Int -> Double -> Double -> Double -> IO SampleAverageBandit
+  mkSampleAverageBandit karm totalStep ge initValue stepValue = do
+    srcRVars <- initSrcDataDistribution karm
+    pure (SampleAverageBandit karm (take karm (repeat initValue)) (take karm (repeat 0)) ge
+                              stepValue 0.0 totalStep [] srcRVars (bernoulli ge))

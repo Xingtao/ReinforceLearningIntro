@@ -33,6 +33,7 @@ data SampleAverageBandit = SampleAverageBandit {
     ,_totalReward :: Double
     ,_totalStep :: Int
     ,_bestTakes :: [Double]
+    
     -- ramdoms
     ,_srcRVars :: [RVar Double]
     ,_greedyEpsilonRVar :: RVar Bool
@@ -66,12 +67,12 @@ takeOneAction bExplore saBandit = do
                    & (bestTakes %~ ( ++ [bestTake]))
          )
 
-doSampleAverage :: SampleAverageBandit -> IO (SampleAverageBandit, [Double])
+doSampleAverage :: SampleAverageBandit -> IO ([Double], [Double])
 doSampleAverage saBandit = do
   updatedRef <- newIORef saBandit
   averageRewards <- go 1 updatedRef saBandit
   saBandit' <- readIORef updatedRef
-  pure (saBandit', averageRewards)
+  pure (averageRewards, _bestTakes saBandit')
   where
   go count updatedRef saBandit
     | count > (_totalStep saBandit) = writeIORef updatedRef saBandit >> pure []
