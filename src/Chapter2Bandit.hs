@@ -17,6 +17,9 @@ import Data.Random.Distribution.Uniform
 import Data.Random.Source.IO
 import Language.Haskell.TH
 
+import Numeric.LinearAlgebra (Vector, Matrix)
+import qualified Numeric.LinearAlgebra as LA
+
 import Utils
 
 ------------------------------------------------------------------------------------------
@@ -25,6 +28,7 @@ import Utils
 data SampleAverageBandit = SampleAverageBandit {
      _kArms :: Int
     ,_qValues :: [Double]
+    ,_bestValueIdx :: Int
     ,_nActions :: [Int]
     ,_greedyEpsilon :: Double
     -- if < 0, use N(A), then it is stationary;
@@ -33,7 +37,6 @@ data SampleAverageBandit = SampleAverageBandit {
     ,_totalReward :: Double
     ,_totalStep :: Int
     ,_bestTakes :: [Double]
-    
     -- ramdoms
     ,_srcRVars :: [RVar Double]
     ,_greedyEpsilonRVar :: RVar Bool
@@ -47,32 +50,32 @@ instance Show SampleAverageBandit where
 
 takeOneAction :: Bool -> SampleAverageBandit -> IO SampleAverageBandit
 takeOneAction bExplore saBandit = do
-  let curBestActionIdx = fst $ argmaxWithIndex (zip [0..] (_qValues saBandit))
   actionN <- case bExplore of
                True -> sample (randomElement [0..((_kArms saBandit) - 1)])
-               False -> pure curBestActionIdx
-  let bestTake = case curBestActionIdx == actionN of
+               False -> pure . fst . argmaxWithIndex $ (zip [0..] (_qValues saBandit))
+  let bestTake = case (_bestValueIdx saBandit) == actionN of
                    True -> 1.0
                    False -> 0.0
   reward <- sample (_srcRVars saBandit !! actionN)
   let updateStepSize = _stepSize saBandit
       oldActionN = (_nActions saBandit) !! actionN
       oldValue = (_qValues saBandit) !! actionN
-      newValue | updateStepSize < 0 = oldValue + (reward - oldValue) / (fromIntegral $ oldActionN + 1)
+      newValue | updateStepSize < 0 = oldValue + (reward - oldValue)/(fromIntegral $ oldActionN + 1)
                | otherwise = oldValue + (reward - oldValue) / updateStepSize
       -- bestTakeList = _bestTakes saBandit
   pure $ (saBandit & (nActions . element actionN +~ 1)
                    & (qValues . element actionN .~ newValue)
                    & (totalReward +~ reward)
-                   & (bestTakes %~ ( ++ [bestTake]))
+                   & (bestTakes %~ (++ [bestTake]))
          )
 
-doSampleAverage :: SampleAverageBandit -> IO ([Double], [Double])
+doSampleAverage :: SampleAverageBandit -> IO (Vector Double)
 doSampleAverage saBandit = do
   updatedRef <- newIORef saBandit
   averageRewards <- go 1 updatedRef saBandit
   saBandit' <- readIORef updatedRef
-  pure (averageRewards, _bestTakes saBandit')
+  -- print (_bestTakes saBandit')
+  pure $ LA.fromList (averageRewards ++ (_bestTakes saBandit'))
   where
   go count updatedRef saBandit
     | count > (_totalStep saBandit) = writeIORef updatedRef saBandit >> pure []
