@@ -50,17 +50,16 @@ drawFigure2_2 totalStep greedys rbs = do
   let (!rewardCurves, !bestPercentages) = foldl goPlot (mp, mp) (zip greedys rbs)
       !figure2_2 = subplots @@ [o2 "nrows" 2, o2 "sharey" True]
                      % setSubplot 0
-                     % rewardCurves
+                     % title "Figure 2-2: Average Sample Different Paramters Comparison"
                      % xlabel "Step"
                      % ylabel "Optiomal Reward"
-                     % title "Figure 2-2: Average Sample Different Paramters Comparison"
+                     % rewardCurves
                      % setSubplot 1
-                     % bestPercentages
                      % xlabel "Step"
                      % ylabel "Best Actions"
+                     % bestPercentages
                      % tightLayout
-  code figure2_2 >>= print
-  -- 
+  code figure2_2 >> pure () -- avoid Matplotlib's bug
   onscreen figure2_2
   threadDelay 2000000 >> pure ()
   where
