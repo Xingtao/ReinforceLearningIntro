@@ -54,15 +54,15 @@ drawFigure2_2 totalStep greedys rbs = do
                      % xlabel "Step"
                      % ylabel "Optiomal Reward"
                      % rewardCurves
-                     % yticks [0.0, 0.1 .. 1.6]
+                     -- % yticks [0.0, 0.1 .. 1.6]
                      % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
                      % grid True
 
                      % setSubplot 1
                      % xlabel "Step"
                      % ylabel "Best Actions"
-                     % bestPercentages
                      % yticks [0.0::Double, 0.1 .. 1.0]
+                     % bestPercentages
                      % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
                      % grid True
                      % tightLayout
