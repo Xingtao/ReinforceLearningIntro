@@ -54,23 +54,28 @@ drawFigure2_2 totalStep greedys rbs = do
                      % xlabel "Step"
                      % ylabel "Optiomal Reward"
                      % rewardCurves
+                     % yticks [0.0, 0.1 .. 1.6]
+                     % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                     % grid True
+
                      % setSubplot 1
                      % xlabel "Step"
                      % ylabel "Best Actions"
                      % bestPercentages
+                     % yticks [0.0::Double, 0.1 .. 1.0]
+                     % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                     % grid True
                      % tightLayout
   code figure2_2 >> pure () -- avoid Matplotlib's bug
   onscreen figure2_2
-  threadDelay 2000000 >> pure ()
+  threadDelay 1000000 >> pure ()
   where
   goPlot :: (Matplotlib, Matplotlib) -> (Double, Vector Double) -> (Matplotlib, Matplotlib)
   goPlot (accReward, accBestAction) (greedy, rb) =
     let !splitsRB = LA.takesV [totalStep, totalStep] rb
-    in  (accReward % plot [1..totalStep] (splitsRB!!0) @@ [o2 "label" ("epsilon="++(show greedy))]
-                   % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"],
+    in  (accReward % plot [1..totalStep] (splitsRB!!0) @@ [o2 "label" ("epsilon="++(show greedy))],
          accBestAction % plot [1..totalStep] (splitsRB!!1)
-                              @@ [o2 "label" ("epsilon="++(show greedy))]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                               @@ [o2 "label" ("epsilon="++(show greedy))]                       
         )
   
 ------------------------------------------------------------------------------------------
