@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Chapter2Bandit
-    ( SampleAverageBandit(..)
+    ( Bandit(..)
     , doSampleAverage
     ) where
 
@@ -23,9 +23,22 @@ import qualified Numeric.LinearAlgebra as LA
 import Utils
 
 ------------------------------------------------------------------------------------------
--- | Three methods: sample averate, gradient, ...
+-- | Three methods: sample average, UCB, gradient bandit
+--   For action selections (exploit & explore) of above methods:
+--       1. sample average epsilon-greedy to do exploration.
+--       2. UCB using:  Qt(a) + c sqrt(log t / Nt(a))
+--       3. Gradient using Qt(a) as Preference value, select action by softmax
+--   For Qt(a) (Value Estimate) Update
+--       1. sample average using: newVal = oldVal + stepSize * (curReward - oldVal)
+--       2. UCB using the same one with sample average
+--       3. Gradient using gradient approximation:
+--             newValue = oldValue + stepSize * (curReward - baselineVal) * ( 1 - softmax)
+--             for the selected action
+--         and newValue = oldValue + stepSize * (curReward - baselineVal) * softmax
+--             for all other non-selected actions
+--         where baseline could be 0, or the average value of all action rewards
 
-data SampleAverageBandit = SampleAverageBandit {
+data Bandit = Bandit {
      _kArms :: Int
     ,_qValues :: [Double]
     ,_bestValueIdx :: Int
@@ -35,20 +48,24 @@ data SampleAverageBandit = SampleAverageBandit {
     -- if > 0, use constant stepSize means non-stationary env, weight recent reward more.
     ,_stepSize :: Double
     ,_totalReward :: Double
+    ,_curStep :: Int
     ,_totalStep :: Int
     ,_bestTakes :: [Double]
-    -- ramdoms
+    -- input ramdoms
     ,_srcRVars :: [RVar Double]
+    -- explore methods
     ,_greedyEpsilonRVar :: RVar Bool
+    ,_ucbParam :: Double
+    ,_gradientAlpha :: Double
     }
 
-makeLenses ''SampleAverageBandit
+makeLenses ''Bandit
 
-instance Show SampleAverageBandit where
+instance Show Bandit where
   show saBandit = (show $ _kArms saBandit) ++ " arms, stepSize " ++ (show $ _stepSize saBandit) ++
                   ", greedyEpsilon: " ++ (show $ _greedyEpsilon saBandit)
 
-takeOneAction :: Bool -> SampleAverageBandit -> IO SampleAverageBandit
+takeOneAction :: Bool -> Bandit -> IO Bandit
 takeOneAction bExplore saBandit = do
   actionN <- case bExplore of
                True -> sample (randomElement [0..((_kArms saBandit) - 1)])
@@ -69,7 +86,7 @@ takeOneAction bExplore saBandit = do
                    & (bestTakes %~ (++ [bestTake]))
          )
 
-doSampleAverage :: SampleAverageBandit -> IO (Vector Double)
+doSampleAverage :: Bandit -> IO (Vector Double)
 doSampleAverage saBandit = do
   updatedRef <- newIORef saBandit
   averageRewards <- go 1 updatedRef saBandit

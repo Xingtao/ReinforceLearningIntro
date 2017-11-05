@@ -105,7 +105,7 @@ doSampleAverageTest config = do
   let arrParams = zip3 ges initValues stepValues
   !results <- mapM (\ (ge, initValue, stepValue) -> do
                      temp <- replicateM totalBandits
-                               (mkSampleAverageBandit karm totalStep
+                               (mkBandit karm totalStep
                                   ge initValue stepValue >>= doSampleAverage)
                      pure $ (sum temp) / (fromIntegral totalBandits)
                   )
@@ -117,10 +117,10 @@ doSampleAverageTest config = do
   print "Finished Average Sample Experiments"
   threadDelay 6000000 >> pure ()
   where
-  mkSampleAverageBandit :: Int -> Int -> Double -> Double -> Double -> IO SampleAverageBandit
-  mkSampleAverageBandit karm totalStep ge initValue stepValue = do
+  mkBandit :: Int -> Int -> Double -> Double -> Double -> IO Bandit
+  mkBandit karm totalStep ge initValue stepValue = do
     trueValues <- generateRandomList karm stdNormal
     let (maxValueIdx, _) = argmaxWithIndex (zip [0..] trueValues)
-    pure (SampleAverageBandit karm (take karm (repeat initValue)) maxValueIdx
-                              (take karm (repeat 0)) ge stepValue 0.0 totalStep []
-                              (map (flip normal 1.0) trueValues) (bernoulli ge))
+    pure (Bandit karm (take karm (repeat initValue)) maxValueIdx
+                      (take karm (repeat 0)) ge stepValue 0.0 totalStep []
+                      (map (flip normal 1.0) trueValues) (bernoulli ge))
