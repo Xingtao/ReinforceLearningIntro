@@ -9,6 +9,7 @@ module Chapter2Bandit
     ) where
 
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import Data.List(take, repeat)
@@ -75,30 +76,21 @@ data Bandit = Bandit {
 makeLenses ''Bandit
 
 step :: StateT Bandit IO Double
-step = selectAction >>= takeAction
+step = selectAction >>= takeOneAction
 
 selectAction :: StateT Bandit IO Int
 selectAction = do
   bandit <- get
-  case _policy bandit of
+  actionN <- case _policy bandit of
     EGreedy epsilonRVar ->
-      bExplore <- liftIO $ sample epsilonRVar
-      
-      actionN <- 
-      if bExplore then pure . liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
-         else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues saBandit))
-   
-
-selectByPolicy :: Bandit -> (Int, Bandit)
-selectByPolicy bandit =
-
-state $ randomR (1, 6)
-
-takeOneAction :: Bool -> Bandit -> IO Bandit
-takeOneAction bExplore saBandit = do
-  actionN <- case bExplore of
-               True -> 
-               False -> pure . fst . argmaxWithIndex $ (zip [0..] (_qValues saBandit))
+      bExplore <- liftIO $ sample epsilonRVar            
+        if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
+           else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
+    _ -> pure 0
+ 
+takeOneAction :: Int -> StateT Bandit IO Double
+takeOneAction = do
+  bandit <- 
   let bestTake = case (_bestValueIdx saBandit) == actionN of
                    True -> 1.0
                    False -> 0.0
