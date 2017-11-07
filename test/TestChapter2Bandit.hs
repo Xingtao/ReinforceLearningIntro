@@ -46,10 +46,15 @@ drawFigure2_1 karm = do
   onscreen figure2_1
   pure ()
 
-drawFigure2_2 :: Int -> [Double] -> [Vector Double] -> IO ()
-drawFigure2_2 totalStep greedys rbs = do
+
+drawEpsilonGreedy :: Config -> ([Vector Double], [Vector Double]) -> IO ()
+drawEpsilonGreedy config averageRewards optimalActions = do
+  (totalStep :: Int) <- require config "totalStep"
+  (ges :: [Double]) <- require config "greedy.epsilons"
+  (initValues :: [Double]) <- require config "greedy.initialOptimalValues"
+  
   let (!rewardCurves, !bestPercentages) = foldl goPlot (mp, mp) (zip greedys rbs)
-      !figure2_2 = subplots @@ [o2 "nrows" 2, o2 "sharey" True]
+      !figureGreedy = subplots @@ [o2 "nrows" 2, o2 "sharey" True]
                      % setSubplot 0
                      % title "Figure 2-2: Average Sample Different Paramters Comparison"
                      % xlabel "Step"
@@ -67,8 +72,8 @@ drawFigure2_2 totalStep greedys rbs = do
                      % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
                      % grid True
                      % tightLayout
-  code figure2_2 >> pure () -- avoid Matplotlib's bug
-  onscreen figure2_2
+  code figureGreedy >> pure () -- avoid Matplotlib's bug
+  onscreen figureGreedy
   threadDelay 1000000 >> pure ()
   where
   goPlot :: (Matplotlib, Matplotlib) -> (Double, Vector Double) -> (Matplotlib, Matplotlib)
@@ -90,12 +95,14 @@ testChapter2 configPath = do
   -- zipWith when bTests [drawFigure2_1 karm, ]  
   
   -- EpsilonGreedy Experiment
-  doEpsilonGreedyTests config
+  greedyResults <- doEpsilonGreedyTests config
+  -- UCB Experiment
+  ucbResults <- doUCBTests config
   pure ()
 
 -- | doEpsilonGreedyTest Method: compare different epsilons, different initial values,
 --   also non-stationary (const step size, weight recent reward more) and stationary environment. 
-doEpsilonGreedyTests :: Config -> IO ()
+doEpsilonGreedyTests :: Config -> IO (Vector Double, Vector Double)
 doEpsilonGreedyTests config = do
   -- read all sample average related params
   karm <- require config "kArms"
@@ -106,23 +113,25 @@ doEpsilonGreedyTests config = do
   (stepValues :: [Double]) <- require config "greedy.stepSizes"
   -- run experiments
   let arrParams = zip3 ges initValues stepValues
-  !results <- mapM (\ (ge, initValue, stepValue) -> do
-                      temp <- replicateM totalBandits
-                                 (goOneBanditEpsilonGreedy karm totalStep ge initValue stepValue)
-                      pure $ (sum temp) / (fromIntegral totalBandits)
-                  )
-                  arrParams
+  (ars, oas) <- mapM (\ (ge, initValue, stepValue) -> do
+                        temp <- replicateM totalBandits
+                                  (goOneBanditEpsilonGreedy karm totalStep ge initValue stepValue)
+                        pure $ (sum temp) / (fromIntegral totalBandits)
+                     )
+                     arrParams
   print "Get results"  
   -- draw it
-  drawFigure2_2 totalStep ges results
+  drawEpsilonGreedy ges ars oas
   
   print "Finished Epsilon Greedy Experiments"
-  threadDelay 6000000 >> pure ()
+  threadDelay 6000000
+  pure (ars, oas)
 
-goOneBanditEpsilonGreedy :: Int -> Int -> Double -> Double -> Double -> IO (Vector Double)
+goOneBanditEpsilonGreedy :: Int -> Int -> Double -> Double ->
+                                          Double -> IO (Vector Double, Vector Double)
 goOneBanditEpsilonGreedy karm totalStep ge initValue stepSize = do
   trueValues <- replicateM karm (sample stdNormal)
   let greedyRVar = bernoulli ge
       initBandit = mkBandit karm totalStep initValue stepSize trueValues (EGreedy greedyRVar)
   (averageRewards, bandit) <- runStateT (loopSteps totalStep) initBandit
-  pure . LA.fromList $ averageRewards ++ (_bestTakes bandit)
+  pure (LA.fromList averageRewards, LA.fromList (_bestTakes bandit))
