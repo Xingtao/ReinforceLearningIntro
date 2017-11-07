@@ -5,12 +5,15 @@
 
 module Chapter2Bandit
     ( Bandit(..)
-    , doSampleAverage
+    , Policy(..)
+    , mkBandit
+    , loopSteps
     ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
+
 import Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import Data.List(take, repeat)
 import Data.IORef
@@ -40,10 +43,10 @@ import Utils
 -- | For Qt(a) (Value Estimate) Update:
 --   1. 'epsilon-greedy' & 'UCB' methods using form of:
 --         newVal = oldVal + stepSize * (curReward - oldVal)
---      where 'stepSize' could use 'sample average' or 'exponential, ecency-weighted average'(constant stepSize).
 --      here, 'stepSize' parameter in configuration file:
 --        if < 0, use 'sample average', then it is stationary;
---        if > 0, use 'exponential, ecency-weighted average', then it's non-stationary, weight recent reward more.
+--        if > 0, use 'exponential, recency-weighted average',
+--                then it's non-stationary, weight recent reward more.
 --   2. Gradient bandit using gradient approximation:
 --           newValue = oldValue + stepSize * (curReward - baselineVal) * ( 1 - softmax)
 --           for the selected action's state value update
@@ -53,13 +56,13 @@ import Utils
 --       and 'stepSize' is the same as above.
 
 ------------------------------------------------------------------------------------------
-
 data Policy = EGreedy (RVar Bool) -- Bernoulli distribution with p = epsilon
             | UCB Double -- ucb explore parameter 'c'
             | Gradient Double -- gradient baseline param, if < 0, use average reward value
 
 data Bandit = Bandit {
      _kArms :: Int
+    ,_initValues :: [Double]
     ,_bestValueIdx :: Int -- it is pre-known, for OptimalAction statistics
     ,_qValues :: [Double] -- estimate value of each action
     ,_nActions :: [Int] -- count of each atcion has taken
@@ -75,52 +78,53 @@ data Bandit = Bandit {
 
 makeLenses ''Bandit
 
-step :: StateT Bandit IO Double
-step = selectAction >>= takeOneAction
+mkBandit :: Int -> Int -> Double -> Double -> [Double] -> Policy -> Bandit
+mkBandit karm totalStep initValue stepSize trueValues policy = 
+  let (maxValueIdx, _) = argmaxWithIndex (zip [0..] trueValues)
+  in  (Bandit karm (take karm $ repeat initValue) maxValueIdx
+                   (take karm $ repeat 0.0) (take karm $ repeat 0)
+                    stepSize 0.0 0 [] (map (flip normal 1.0) trueValues) policy)
 
-selectAction :: StateT Bandit IO Int
-selectAction = do
+--------------------------------------------------------------------------------
+
+loopSteps :: Int -> StateT Bandit IO [Double]
+loopSteps times = replicateM times step
+
+step :: StateT Bandit IO Double
+step = selectOneAction >>= takeOneAction
+
+selectOneAction :: StateT Bandit IO Int
+selectOneAction = do
   bandit <- get
   actionN <- case _policy bandit of
-    EGreedy epsilonRVar ->
+    EGreedy epsilonRVar -> do
       bExplore <- liftIO $ sample epsilonRVar            
-        if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
-           else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
-    _ -> pure 0
- 
+      if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
+         else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
+    UCB c -> pure 0
+    Gradient baseline -> pure 0 
+  pure actionN
+
 takeOneAction :: Int -> StateT Bandit IO Double
-takeOneAction = do
-  bandit <- 
-  let bestTake = case (_bestValueIdx saBandit) == actionN of
+takeOneAction actionN = do
+  bandit <- get
+  let bestTake = case (_bestValueIdx bandit) == actionN of
                    True -> 1.0
                    False -> 0.0
-  reward <- sample (_srcRVars saBandit !! actionN)
-  let updateStepSize = _stepSize saBandit
-      oldActionN = (_nActions saBandit) !! actionN
-      oldValue = (_qValues saBandit) !! actionN
+  reward <- liftIO $ sample (_srcRVars bandit !! actionN)
+  let updateStepSize = _stepSize bandit
+      oldActionN = (_nActions bandit) !! actionN
+      oldValue = (_qValues bandit) !! actionN
       newValue | updateStepSize < 0 = oldValue + (reward - oldValue)/(fromIntegral $ oldActionN + 1)
                | otherwise = oldValue + (reward - oldValue) / updateStepSize
-      -- bestTakeList = _bestTakes saBandit
-  pure $ (saBandit & (nActions . element actionN +~ 1)
-                   & (qValues . element actionN .~ newValue)
-                   & (totalReward +~ reward)
-                   & (bestTakes %~ (++ [bestTake]))
-         )
+      -- bestTakeList = _bestTakes bandit
+  let bandit' = (bandit & (nActions . element actionN +~ 1)
+                        & (qValues . element actionN .~ newValue)
+                        & (totalReward +~ reward)
+                        & (curStep +~ 1)
+                        & (bestTakes %~ (++ [bestTake]))
+                )
+  put bandit'
+  pure (_totalReward bandit' / (fromIntegral $ _curStep bandit'))
 
-runLoop :: Int -> State Bandit (Double)
-runLoop = replicateM (runState a 
-
-runLoop :: Bandit a => a -> Int -> IO (Vector Double)
-runLoop bandit steps = do
-  updatedRef <- newIORef bandit
-  averageRewards <- go 1 updatedRef bandit
-  bandit' <- readIORef updatedRef
-  -- print (_bestTakes bandit')
-  pure $ LA.fromList (averageRewards ++ (_bestTakes bandit'))
-  where
-  go count updatedRef bandit
-    | count > (_totalStep bandit) = writeIORef updatedRef bandit >> pure []
-    | otherwise = do
-        bExplore <- sample (_greedyEpsilonRVar bandit)
-        newSA <- takeOneAction bExplore bandit
-        ( (_totalReward newSA) / (fromIntegral count) :) <$> go (count + 1) updatedRef newSA
+--------------------------------------------------------------------------------

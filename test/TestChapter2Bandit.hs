@@ -9,6 +9,7 @@ module TestChapter2Bandit (
       )where
 
 import Control.Monad
+import Control.Monad.Trans.State
 import Control.Concurrent
 import Control.Parallel
 import Control.Parallel.Strategies
@@ -54,14 +55,14 @@ drawFigure2_2 totalStep greedys rbs = do
                      % xlabel "Step"
                      % ylabel "Optiomal Reward"
                      % rewardCurves
-                     -- % yticks [0.0, 0.1 .. 1.6]
+                     % yticks [0.0, 0.1 .. 1.6]
                      % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
                      % grid True
 
                      % setSubplot 1
                      % xlabel "Step"
                      % ylabel "Best Actions"
-                     % yticks [0.0::Double, 0.1 .. 1.0]
+                     -- % yticks [0.0::Double, 0.1 .. 1.0]
                      % bestPercentages
                      % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
                      % grid True
@@ -77,50 +78,51 @@ drawFigure2_2 totalStep greedys rbs = do
          accBestAction % plot [1..totalStep] (splitsRB!!1)
                                @@ [o2 "label" ("epsilon="++(show greedy))]                       
         )
-  
+
 ------------------------------------------------------------------------------------------
 testChapter2 :: FilePath -> IO ()
 testChapter2 configPath = do
   print "Bandit Experiment Starting, will take several minutes "
-  -- readConfigureFile
+  
   (config, _) <- autoReload autoConfig [Required configPath]
   (karm :: Int) <- require config "kArms"
-  drawFigure2_1 karm
-  -- sample average experiment
-  doSampleAverageTest config
+  (bTests :: [Bool]) <- require config "generate.figure1to6"
+  -- zipWith when bTests [drawFigure2_1 karm, ]  
+  
+  -- EpsilonGreedy Experiment
+  doEpsilonGreedyTests config
   pure ()
 
--- | Sample Average Method: compare different epsilons, different initial values,
+-- | doEpsilonGreedyTest Method: compare different epsilons, different initial values,
 --   also non-stationary (const step size, weight recent reward more) and stationary environment. 
-doSampleAverageTest :: Config -> IO ()
-doSampleAverageTest config = do
+doEpsilonGreedyTests :: Config -> IO ()
+doEpsilonGreedyTests config = do
   -- read all sample average related params
   karm <- require config "kArms"
   (totalStep :: Int) <- require config "totalStep"
-  (totalBandits :: Int) <- require config "sampleAverage.totalBandits"
-  (ges :: [Double]) <- require config "sampleAverage.greedyEpsilons"
-  (initValues :: [Double]) <- require config "sampleAverage.initialOptimalValues"
-  (stepValues :: [Double]) <- require config "sampleAverage.stepSizes"
+  (totalBandits :: Int) <- require config "totalBandits"
+  (ges :: [Double]) <- require config "greedy.epsilons"
+  (initValues :: [Double]) <- require config "greedy.initialOptimalValues"
+  (stepValues :: [Double]) <- require config "greedy.stepSizes"
   -- run experiments
   let arrParams = zip3 ges initValues stepValues
   !results <- mapM (\ (ge, initValue, stepValue) -> do
-                     temp <- replicateM totalBandits
-                               (mkBandit karm totalStep
-                                  ge initValue stepValue >>= doSampleAverage)
-                     pure $ (sum temp) / (fromIntegral totalBandits)
+                      temp <- replicateM totalBandits
+                                 (goOneBanditEpsilonGreedy karm totalStep ge initValue stepValue)
+                      pure $ (sum temp) / (fromIntegral totalBandits)
                   )
                   arrParams
   print "Get results"  
   -- draw it
   drawFigure2_2 totalStep ges results
   
-  print "Finished Average Sample Experiments"
+  print "Finished Epsilon Greedy Experiments"
   threadDelay 6000000 >> pure ()
-  where
-  mkBandit :: Int -> Int -> Double -> Double -> Double -> IO Bandit
-  mkBandit karm totalStep ge initValue stepValue = do
-    trueValues <- generateRandomList karm stdNormal
-    let (maxValueIdx, _) = argmaxWithIndex (zip [0..] trueValues)
-    pure (Bandit karm (take karm (repeat initValue)) maxValueIdx
-                      (take karm (repeat 0)) ge stepValue 0.0 totalStep []
-                      (map (flip normal 1.0) trueValues) (bernoulli ge))
+
+goOneBanditEpsilonGreedy :: Int -> Int -> Double -> Double -> Double -> IO (Vector Double)
+goOneBanditEpsilonGreedy karm totalStep ge initValue stepSize = do
+  trueValues <- replicateM karm (sample stdNormal)
+  let greedyRVar = bernoulli ge
+      initBandit = mkBandit karm totalStep initValue stepSize trueValues (EGreedy greedyRVar)
+  (averageRewards, bandit) <- runStateT (loopSteps totalStep) initBandit
+  pure . LA.fromList $ averageRewards ++ (_bestTakes bandit)

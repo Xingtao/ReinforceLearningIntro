@@ -31,6 +31,7 @@ library
                      , text >= 1.2.2.0
                      , hmatrix >= 0.18.1.0
                      , parallel >= 3.2.1.0
+                     , transformers >= 0.5.2.0
 
   default-language:    Haskell2010
 
@@ -55,5 +56,7 @@ test-suite RLIntro-test
                      , text >= 1.2.2.0
                      , hmatrix >= 0.18.1.0
                      , parallel >= 3.2.1.0
+                     , transformers >= 0.5.2.0
+
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
