@@ -56,9 +56,9 @@ testChapter2 configPath = do
   (ucbRewardsCurves, ucbActionCurves) <- if bUCB then doUCBTests config else pure (mp, mp)
                                                           
   -- Gradient Experiment
-  --(gradientRewardsCurves, gradientActionCurves) <- if bGradient then doGradientTests config
-  --                                                    else pure (mp, mp)
-  let (gradientRewardsCurves, gradientActionCurves) = (mp, mp)
+  (gradientRewardsCurves, gradientActionCurves) <- if bGradient then doGradientTests config
+                                                      else pure (mp, mp)
+  
   when bCompareTogether (drawExperimentsCurves config 
                               (greedyRewardsCurves % ucbRewardsCurves % gradientRewardsCurves,
                                greedyActionCurves % ucbActionCurves % gradientActionCurves))
@@ -120,6 +120,33 @@ doUCBTests config = do
   (ars, oas) <- drawUCB config results  
   finishTime <- getCurrentTime
   print $ (show finishTime) ++ ": Finished UCB Experiments"
+  pure (ars, oas)
+
+------------------------------------------------------------------------------------------
+-- | doUCBTest Method
+doGradientTests :: Config -> IO (Matplotlib, Matplotlib)
+doGradientTests config = do
+  startTime <- getCurrentTime
+  print (show startTime ++ ": Start Gradient Experiment: ")
+  -- read all sample average related params
+  (karm :: Int) <- require config "kArms"
+  (totalStep :: Int) <- require config "totalStep"
+  (totalBandits :: Int) <- require config "totalBandits"
+  (sss :: [Double]) <- require config "gradient.stepSizes"
+  (bBaselines :: [Bool]) <- require config "gradient.baselines"
+  -- run experiments
+  let arrParams = zip sss bBaselines
+  !results <- mapM (\ (stepSize, bBase) -> do
+                      let policy = Gradient bBase
+                      !ret <- replicateM totalBandits (oneBanditGo karm totalStep 0.0 stepSize policy)
+                      pure $ (sum ret) / (fromIntegral totalBandits)
+                   ) arrParams
+  resultTime <- getCurrentTime
+  print (show resultTime ++ ": Get Gradient results, prepare drawing")  
+  -- draw it
+  (ars, oas) <- drawGradient config results  
+  finishTime <- getCurrentTime
+  print $ (show finishTime) ++ ": Finished Gradient Experiments"
   pure (ars, oas)
 
 ------------------------------------------------------------------------------------------
@@ -212,6 +239,39 @@ drawUCB config results = do
   goPlot startIdx totalLen acc (ucbStepSize, theData) =
     acc % plot [1..totalLen] (LA.subVector startIdx totalLen theData)
                @@ [o2 "label" ("ucb, c=" ++ (show ucbStepSize))]
+
+drawGradient :: Config -> [Vector Double] -> IO (Matplotlib, Matplotlib)
+drawGradient config results = do
+  (totalStep :: Int) <- require config "totalStep"
+  (bBaselines :: [Bool]) <- require config "ucb.baselines"
+  (sss :: [Double]) <- require config "ucb.stepSizes"  
+  let rewardCurves = foldl (goPlot 0 totalStep) mp (zip3 sss bBaselines results)
+      bestActions = foldl (goPlot totalStep totalStep) mp (zip3 sss bBaselines results)
+      !figureReward = rewardCurves
+                       % title "Gradient Average Reward Comparison"
+                       % xlabel "Step"
+                       % ylabel "Average Reward"
+                       % yticks [0.0, 0.2 .. 1.6]
+                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % grid True
+      !figureAction = bestActions                          
+                       % title "Gradient Optimal Action Comparison"
+                       % xlabel "Step"
+                       % ylabel "Optiomal Actions"
+                       % yticks [0.0::Double, 0.2 .. 1.0]
+                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % grid True
+                       % tightLayout
+  --
+  code figureReward >> code figureAction -- avoid Matplotlib's bug
+  onscreen figureReward >> onscreen figureAction  
+  threadDelay 500000
+  pure (rewardCurves, bestActions)
+  where
+  goPlot :: Int -> Int -> Matplotlib -> (Double, Bool, Vector Double) -> Matplotlib
+  goPlot startIdx totalLen acc (alpha, bBaseline, theData) =
+    acc % plot [1..totalLen] (LA.subVector startIdx totalLen theData)
+               @@ [o2 "label" ("alpha=" ++ (show alpha) ++ (bBaseline?(",with", ",without")))]
 
 drawExperimentsCurves :: Config -> (Matplotlib, Matplotlib) -> IO ()
 drawExperimentsCurves config (rewards, actions) = do

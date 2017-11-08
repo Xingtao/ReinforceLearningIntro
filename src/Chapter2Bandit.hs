@@ -58,7 +58,7 @@ import Utils
 ------------------------------------------------------------------------------------------
 data Policy = EGreedy (RVar Bool) -- Bernoulli distribution with p = epsilon
             | UCB Double -- ucb explore parameter 'c'
-            | Gradient (Bool, Double) -- gradient baseline param, if < 0, use average reward value
+            | Gradient Bool -- gradient baseline param, if < 0, use average reward value
 
 data Bandit = Bandit {
      _kArms :: Int
@@ -104,7 +104,10 @@ selectOneAction = do
     UCB c -> do
       let !ucbEstValues = zipWith (calcUCB (_curStep bandit)) (_nActions bandit) (_qValues bandit)
       pure $ fst $ argmaxWithIndex (zip [0..] ucbEstValues)
-    Gradient baseline -> pure 0 
+    Gradient bBaseline -> do
+      let gradientValues = map exp (_qValues bandit)
+          gradientProbs = map ( / sum gradientValues) gradientValues
+      pure $ fst $ argmaxWithIndex (zip [0..] gradientProbs)
   pure actionN
   where
   calcUCB :: Int -> Int -> Double -> Double
@@ -113,21 +116,34 @@ selectOneAction = do
 takeOneAction :: Int -> StateT Bandit IO Double
 takeOneAction actionN = do
   bandit <- get
-  let bestTake = (_bestValueIdx bandit == actionN) ? (1.0, 0.0)
   reward <- liftIO $ sample (_srcRVars bandit !! actionN)
-  let updateStepSize = _stepSize bandit
-      oldActionN = (_nActions bandit) !! actionN
-      oldEstValue = (_qValues bandit) !! actionN
-      newEstValue | updateStepSize < 0 = oldEstValue + (reward - oldEstValue)/(fromIntegral $ oldActionN + 1)
-                  | otherwise = oldEstValue + (reward - oldEstValue) * updateStepSize
-      -- bestTakeList = _bestTakes bandit
-  let bandit' = (bandit & (nActions . element actionN +~ 1)
-                        & (qValues . element actionN .~ newEstValue)
-                        & (totalReward +~ reward)
-                        & (curStep +~ 1)
-                        & (bestTakes %~ (++ [bestTake]))
-                )
-  put bandit'
+  let bestTake = (_bestValueIdx bandit == actionN) ? (1.0, 0.0)
+      bandit' = bandit & (nActions . element actionN +~ 1)
+                       & (totalReward +~ reward)
+                       & (curStep +~ 1)
+                       & (bestTakes %~ (++ [bestTake]))
+      bandit'' = stateUpdate bandit' actionN reward      
+  put bandit''
   pure reward
-
+  where
+  stateUpdate :: Bandit -> Int -> Double -> Bandit
+  stateUpdate bandit actionN reward =
+    let actionTakes = (_nActions bandit) !! actionN
+        ss = (_stepSize bandit < 0) ? (1.0 / fromIntegral actionTakes, _stepSize bandit)
+        oldEstValue = (_qValues bandit) !! actionN
+    in  case _policy bandit of
+          Gradient bBaseline ->
+            let baseline = bBaseline ? (_totalReward bandit / (fromIntegral $ _curStep bandit), 0.0)
+                gradientValues = map exp (_qValues bandit)
+                gradientProbs = map ( / sum gradientValues) gradientValues
+                newEstValues = zipWith3 (updateGradientPreference reward baseline ss)
+                                        (_qValues bandit) gradientProbs [1..]
+            in  bandit & (qValues .~ newEstValues)
+          -- epsilone greedy & ucb use the same updating formular
+          _ -> let newEstValue = oldEstValue + (reward - oldEstValue) * ss
+               in  bandit & (qValues . element actionN .~ newEstValue)
+  updateGradientPreference :: Double -> Double -> Double -> Double -> Double -> Int -> Double 
+  updateGradientPreference reward baseline ss oldVal prob actionIdx =
+    (actionN == actionIdx) ? (oldVal + ss * (reward - baseline) * (1 - prob),
+                              oldVal + ss * (reward - baseline) * prob)
 --------------------------------------------------------------------------------
