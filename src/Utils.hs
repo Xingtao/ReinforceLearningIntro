@@ -24,6 +24,10 @@ argmaxWithIndex :: (Ord a) => [(Int, a)] -> (Int, a)
 argmaxWithIndex = maximumBy (comparing snd)
 
 
+-- | handy operator
+(?) :: Bool -> (a, a) -> a
+(?) bTrue (x, y) = if bTrue then x else y
+
 {-
 import System.Random
 -- 'Psuedo' Random Distributions

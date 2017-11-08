@@ -56,23 +56,23 @@ drawEpsilonGreedy config results = do
   let rewardCurves = foldl (goPlot 0 totalStep) mp (zip3 ges initValues results)
       bestActions = foldl (goPlot totalStep totalStep) mp (zip3 ges initValues results)
       !figureGreedy = subplots @@ [o2 "nrows" 2, o2 "sharey" True]
-                     % setSubplot 0
-                     % rewardCurves
-                     % title "Epsilon-Greedy Different Paramters Comparison"
-                     % xlabel "Step"
-                     % ylabel "Optiomal Reward"
-                     % yticks [0.0, 0.2 .. 1.6]
-                     % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
-                     % grid True
-
-                     % setSubplot 1
-                     % bestActions
-                     % xlabel "Step"
-                     % ylabel "Optiomal Actions"
-                     % yticks [0.0::Double, 0.2 .. 1.6]
-                     % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
-                     % grid True
-                     % tightLayout
+                        % setSubplot 0
+                        % rewardCurves
+                        % title "Epsilon-Greedy Different Paramters Comparison"
+                        % xlabel "Step"
+                        % ylabel "Average Reward"
+                        % yticks [0.0, 0.2 .. 1.6]
+                        % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                        % grid True
+                         
+                        % setSubplot 1
+                        % bestActions
+                        % xlabel "Step"
+                        % ylabel "Optiomal Actions"
+                        % yticks [0.0::Double, 0.2 .. 1.6]
+                        % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                        % grid True
+                        % tightLayout
   --
   code figureGreedy >> pure () -- avoid Matplotlib's bug
   onscreen figureGreedy
@@ -128,7 +128,7 @@ doEpsilonGreedyTests config = do
 
 goOneBanditEpsilonGreedy :: Int -> Int -> Double -> Double -> Double -> IO (Vector Double)
 goOneBanditEpsilonGreedy karm totalStep ge initValue stepSize = do
-  trueValues <- replicateM karm (sample stdNormal)
+  trueValues <- generateRandomList karm stdNormal
   let greedyRVar = bernoulli ge
       initBandit = mkBandit karm totalStep initValue stepSize trueValues (EGreedy greedyRVar)
   (averageRewards, bandit) <- runStateT (loopSteps totalStep) initBandit

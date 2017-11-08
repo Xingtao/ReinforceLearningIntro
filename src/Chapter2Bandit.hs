@@ -101,30 +101,33 @@ selectOneAction = do
       bExplore <- liftIO $ sample epsilonRVar            
       if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
          else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
-    UCB c -> pure 0
+    UCB c -> do
+      let !ucbEstValues = zipWith (calcUCB (_curStep bandit)) (_nActions bandit) (_qValues bandit)
+      pure $ fst $ argmaxWithIndex (zip [0..] ucbEstValues)
     Gradient baseline -> pure 0 
   pure actionN
+  where
+  calcUCB :: Int -> Int -> Double -> Double
+  calcUCB total n val = val + sqrt ((log $ fromIntegral total) / fromIntegral n)
 
 takeOneAction :: Int -> StateT Bandit IO Double
 takeOneAction actionN = do
   bandit <- get
-  let bestTake = case (_bestValueIdx bandit) == actionN of
-                   True -> 1.0
-                   False -> 0.0
+  let bestTake = (_bestValueIdx bandit == actionN) ? (1.0, 0.0)
   reward <- liftIO $ sample (_srcRVars bandit !! actionN)
   let updateStepSize = _stepSize bandit
       oldActionN = (_nActions bandit) !! actionN
-      oldValue = (_qValues bandit) !! actionN
-      newValue | updateStepSize < 0 = oldValue + (reward - oldValue)/(fromIntegral $ oldActionN + 1)
-               | otherwise = oldValue + (reward - oldValue) / updateStepSize
+      oldEstValue = (_qValues bandit) !! actionN
+      newEstValue | updateStepSize < 0 = oldEstValue + (reward - oldEstValue)/(fromIntegral $ oldActionN + 1)
+                  | otherwise = oldEstValue + (reward - oldEstValue) * updateStepSize
       -- bestTakeList = _bestTakes bandit
   let bandit' = (bandit & (nActions . element actionN +~ 1)
-                        & (qValues . element actionN .~ newValue)
+                        & (qValues . element actionN .~ newEstValue)
                         & (totalReward +~ reward)
                         & (curStep +~ 1)
                         & (bestTakes %~ (++ [bestTake]))
                 )
   put bandit'
-  pure (_totalReward bandit' / (fromIntegral $ _curStep bandit'))
+  pure reward
 
 --------------------------------------------------------------------------------
