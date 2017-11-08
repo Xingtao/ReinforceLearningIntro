@@ -62,7 +62,6 @@ data Policy = EGreedy (RVar Bool) -- Bernoulli distribution with p = epsilon
 
 data Bandit = Bandit {
      _kArms :: Int
-    ,_initValues :: [Double]
     ,_bestValueIdx :: Int -- it is pre-known, for OptimalAction statistics
     ,_qValues :: [Double] -- estimate value of each action
     ,_nActions :: [Int] -- count of each atcion has taken
@@ -81,9 +80,10 @@ makeLenses ''Bandit
 mkBandit :: Int -> Int -> Double -> Double -> [Double] -> Policy -> Bandit
 mkBandit karm totalStep initValue stepSize trueValues policy = 
   let (maxValueIdx, _) = argmaxWithIndex (zip [0..] trueValues)
-  in  (Bandit karm (take karm $ repeat initValue) maxValueIdx
-                   (take karm $ repeat 0.0) (take karm $ repeat 0)
-                    stepSize 0.0 0 [] (map (flip normal 1.0) trueValues) policy)
+  in  (Bandit karm maxValueIdx (take karm $ repeat initValue) 
+              (take karm $ repeat 0) stepSize 0.0 0 []
+              (map (flip normal 1.0) trueValues) policy
+      )
 
 --------------------------------------------------------------------------------
 
@@ -109,7 +109,7 @@ selectOneAction = do
   where
   calcUCB :: Int -> Int -> Double -> Double
   calcUCB total n val = val + sqrt ((log $ fromIntegral total) / fromIntegral n)
-
+  
 takeOneAction :: Int -> StateT Bandit IO Double
 takeOneAction actionN = do
   bandit <- get
