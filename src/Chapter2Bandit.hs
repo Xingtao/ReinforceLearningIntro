@@ -145,5 +145,5 @@ takeOneAction actionN = do
   updateGradientPreference :: Double -> Double -> Double -> Double -> Double -> Int -> Double 
   updateGradientPreference reward baseline ss oldVal prob actionIdx =
     (actionN == actionIdx) ? (oldVal + ss * (reward - baseline) * (1 - prob),
-                              oldVal + ss * (reward - baseline) * prob)
+                              oldVal - ss * (reward - baseline) * prob)
 --------------------------------------------------------------------------------

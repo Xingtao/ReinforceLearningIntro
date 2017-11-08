@@ -211,9 +211,9 @@ drawEpsilonGreedy config results = do
 drawUCB :: Config -> [Vector Double] -> IO (Matplotlib, Matplotlib)
 drawUCB config results = do
   (totalStep :: Int) <- require config "totalStep"
-  (sss :: [Double]) <- require config "ucb.stepSizes"    
-  let rewardCurves = foldl (goPlot 0 totalStep) mp (zip sss results)
-      bestActions = foldl (goPlot totalStep totalStep) mp (zip sss results)
+  (eds :: [Double]) <- require config "ucb.exploreDegree"    
+  let rewardCurves = foldl (goPlot 0 totalStep) mp (zip eds results)
+      bestActions = foldl (goPlot totalStep totalStep) mp (zip eds results)
       !figureReward = rewardCurves
                        % title "UCB Average Reward Comparison"
                        % xlabel "Step"
@@ -236,15 +236,15 @@ drawUCB config results = do
   pure (rewardCurves, bestActions)
   where
   goPlot :: Int -> Int -> Matplotlib -> (Double, Vector Double) -> Matplotlib
-  goPlot startIdx totalLen acc (ucbStepSize, theData) =
+  goPlot startIdx totalLen acc (exploreDegree, theData) =
     acc % plot [1..totalLen] (LA.subVector startIdx totalLen theData)
-               @@ [o2 "label" ("ucb, c=" ++ (show ucbStepSize))]
+               @@ [o2 "label" ("ucb, c=" ++ (show exploreDegree))]
 
 drawGradient :: Config -> [Vector Double] -> IO (Matplotlib, Matplotlib)
 drawGradient config results = do
   (totalStep :: Int) <- require config "totalStep"
-  (bBaselines :: [Bool]) <- require config "ucb.baselines"
-  (sss :: [Double]) <- require config "ucb.stepSizes"  
+  (bBaselines :: [Bool]) <- require config "gradient.baselines"
+  (sss :: [Double]) <- require config "gradient.stepSizes"
   let rewardCurves = foldl (goPlot 0 totalStep) mp (zip3 sss bBaselines results)
       bestActions = foldl (goPlot totalStep totalStep) mp (zip3 sss bBaselines results)
       !figureReward = rewardCurves
