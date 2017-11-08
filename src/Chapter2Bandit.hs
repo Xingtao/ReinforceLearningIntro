@@ -58,7 +58,7 @@ import Utils
 ------------------------------------------------------------------------------------------
 data Policy = EGreedy (RVar Bool) -- Bernoulli distribution with p = epsilon
             | UCB Double -- ucb explore parameter 'c'
-            | Gradient Double -- gradient baseline param, if < 0, use average reward value
+            | Gradient (Bool, Double) -- gradient baseline param, if < 0, use average reward value
 
 data Bandit = Bandit {
      _kArms :: Int
