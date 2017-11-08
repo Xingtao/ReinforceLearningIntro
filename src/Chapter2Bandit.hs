@@ -104,7 +104,7 @@ selectOneAction = do
     UCB c -> do
       let !ucbEstValues = zipWith (calcUCB (_curStep bandit)) (_nActions bandit) (_qValues bandit)
       pure $ fst $ argmaxWithIndex (zip [0..] ucbEstValues)
-    Gradient bBaseline -> do
+    Gradient _ -> do
       let gradientValues = map exp (_qValues bandit)
           gradientProbs = map ( / sum gradientValues) gradientValues
       pure $ fst $ argmaxWithIndex (zip [0..] gradientProbs)
@@ -137,7 +137,7 @@ takeOneAction actionN = do
                 gradientValues = map exp (_qValues bandit)
                 gradientProbs = map ( / sum gradientValues) gradientValues
                 newEstValues = zipWith3 (updateGradientPreference reward baseline ss)
-                                        (_qValues bandit) gradientProbs [1..]
+                                        (_qValues bandit) gradientProbs [0..]
             in  bandit & (qValues .~ newEstValues)
           -- epsilone greedy & ucb use the same updating formular
           _ -> let newEstValue = oldEstValue + (reward - oldEstValue) * ss
