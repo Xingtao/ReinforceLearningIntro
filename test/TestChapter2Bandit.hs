@@ -87,8 +87,6 @@ doEpsilonGreedyTests config = do
                       pure $ (sum ret) / (fromIntegral totalBandits)
                    )
                   arrParams
-  resultTime <- getCurrentTime
-  print (show resultTime ++ ": Get Epsilon Greedy results, prepare drawing")
   -- draw it
   (ars, oas) <- drawEpsilonGreedy config results
   finishTime <- getCurrentTime
@@ -114,8 +112,6 @@ doUCBTests config = do
                      !ret <- replicateM totalBandits (oneBanditGo karm totalStep 0.0 stepSize policy)
                      pure $ (sum ret) / (fromIntegral totalBandits)
                   ) arrParams
-  resultTime <- getCurrentTime
-  print (show resultTime ++ ": Get UCB results, prepare drawing")  
   -- draw it
   (ars, oas) <- drawUCB config results  
   finishTime <- getCurrentTime
@@ -141,9 +137,6 @@ doGradientTests config = do
                       !ret <- replicateM totalBandits (oneBanditGo karm totalStep 0.0 stepSize policy)
                       pure $ (sum ret) / (fromIntegral totalBandits)
                    ) arrParams
-  resultTime <- getCurrentTime
-  print (show resultTime ++ ": Get Gradient results, prepare drawing")  
-  -- draw it
   (ars, oas) <- drawGradient config results  
   finishTime <- getCurrentTime
   print $ (show finishTime) ++ ": Finished Gradient Experiments"
