@@ -21,6 +21,8 @@ import Data.IORef
 import Data.Random
 import Data.Random.Distribution
 import Data.Random.Distribution.Uniform
+import Data.Random.Shuffle.Weighted
+
 import Data.Random.Source.IO
 import Language.Haskell.TH
 
@@ -47,10 +49,10 @@ import Utils
 --        if < 0, use 'sample average', then it is stationary;
 --        if > 0, use 'exponential, recency-weighted average',
 --                then it's non-stationary, weight recent reward more.
---   2. Gradient bandit using gradient approximation:
+--   2. Gradient bandit using gradient approximation, estimate value as preference:
 --           newValue = oldValue + stepSize * (curReward - baselineVal) * ( 1 - softmax)
 --           for the selected action's state value update
---       and newValue = oldValue + stepSize * (curReward - baselineVal) * softmax
+--       and newValue = oldValue - stepSize * (curReward - baselineVal) * softmax
 --           for all other non-selected actions'
 --       where 'baseline' could be 0, or the average value of all action rewards until the time
 --       and 'stepSize' is the same as above.
@@ -63,14 +65,14 @@ data Policy = EGreedy (RVar Bool) -- Bernoulli distribution with p = epsilon
 data Bandit = Bandit {
      _kArms :: Int
     ,_bestValueIdx :: Int -- it is pre-known, for OptimalAction statistics
-    ,_qValues :: [Double] -- estimate value of each action
-    ,_nActions :: [Int] -- count of each atcion has taken
+    ,_qValues :: ![Double] -- estimate value of each action
+    ,_nActions :: ![Int] -- count of each atcion has taken
     ,_stepSize :: Double
-    ,_totalReward :: Double
-    ,_curStep :: Int
-    ,_bestTakes :: [Double]
+    ,_totalReward :: !Double
+    ,_curStep :: !Int
+    ,_bestTakes :: ![Double]
     -- input randoms
-    ,_srcRVars :: [RVar Double]
+    ,_srcRVars :: ![RVar Double]
     -- exploit & explore methods
     ,_policy :: Policy
     }
@@ -107,7 +109,12 @@ selectOneAction = do
     Gradient _ -> do
       let gradientValues = map exp (_qValues bandit)
           gradientProbs = map ( / sum gradientValues) gradientValues
-      pure $ fst $ argmaxWithIndex (zip [0..] gradientProbs)
+          -- sampling according to distribution (element probability)
+          -- the following line will produce a very good result, even 0.4 without baseline. why?
+          -- is it because we do weighted random extract twice ?
+          weightedRVar = weightedShuffle $ zip gradientProbs [0..]
+      liftIO $ head <$> sample weightedRVar
+      -- pure $ fst $ argmaxWithIndex (zip [0..] gradientProbs)
   pure actionN
   where
   calcUCB :: Int -> Int -> Double -> Double
@@ -142,6 +149,7 @@ takeOneAction actionN = do
           -- epsilone greedy & ucb use the same updating formular
           _ -> let newEstValue = oldEstValue + (reward - oldEstValue) * ss
                in  bandit & (qValues . element actionN .~ newEstValue)
+  
   updateGradientPreference :: Double -> Double -> Double -> Double -> Double -> Int -> Double 
   updateGradientPreference reward baseline ss oldVal prob actionIdx =
     (actionN == actionIdx) ? (oldVal + ss * (reward - baseline) * (1 - prob),
