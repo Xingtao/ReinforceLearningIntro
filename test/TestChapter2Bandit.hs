@@ -319,9 +319,11 @@ drawFigure2_6 config = do
          )  eGreedyParams         
   let !eGreedyAverage = calcAverage 0 totalStep eGreedyResults
       !eGreedyAction = calcAverage totalStep totalStep eGreedyResults
-      eGreedyAverageCurve = mp % plot greedyEpsilons eGreedyAverage @@ [o2 "label" "epsilon greedy"]
-      eGreedyActionCurve = mp % plot greedyEpsilons eGreedyAction @@ [o2 "label" "epsilon greedy"]
-
+      eGreedyAverageCurve = mp % plot greedyEpsilons eGreedyAverage
+                                 @@ [o2 "label" "epsilon-greedy"]
+      eGreedyActionCurve = mp % plot greedyEpsilons eGreedyAction
+                                @@ [o2 "label" "epsilon-greedy"]
+  
   -- 2. different e-greedy init values with epsilon = 0.0 and stepSize = 0.1
   let eGreedyInitValParams = zip3 (repeat 0.0) (map (2.0 ^^) greedyInitValues) (repeat 0.1)
   !eGreedyInitValResults <-
@@ -334,9 +336,9 @@ drawFigure2_6 config = do
   let !eGreedyInitValAverage = calcAverage 0 totalStep eGreedyInitValResults
       !eGreedyInitValActions = calcAverage totalStep totalStep eGreedyInitValResults
       eGreedyInitValAverageCurve = mp % plot greedyInitValues eGreedyInitValAverage
-                                             @@ [o2 "label" "epsilon greedy"]
+                                             @@ [o2 "label" "greedy-OpticalValue"]
       eGreedyInitValActionCurve = mp % plot greedyInitValues eGreedyInitValActions
-                                            @@ [o2 "label" "epsilon greedy"]
+                                            @@ [o2 "label" "greedy-OpticalValue"]
 
   -- 3. ucb with stepSize 0.1  
   let ucbParams = zip (repeat 0.1) (map (2.0 ^^) ucbExplore)
@@ -362,8 +364,7 @@ drawFigure2_6 config = do
   let !gradientAverage = calcAverage 0 totalStep gradientResults
       !gradientAction = calcAverage totalStep totalStep gradientResults
       gradientAverageCurve = mp % plot gradientAlpha gradientAverage @@ [o2 "label" "Gradient"]
-      gradientActionCurve = mp % plot gradientAlpha gradientAction @@ [o2 "label" "Gradient"]
-  
+      gradientActionCurve = mp % plot gradientAlpha gradientAction @@ [o2 "label" "Gradient"]  
   -- 5. now draw it
   let !figureReward = eGreedyAverageCurve
                        % gradientAverageCurve
@@ -373,6 +374,7 @@ drawFigure2_6 config = do
                        % xlabel "Paramter (2^x): e / Alpah / c / Q"
                        % ylabel "Average Reward"
                        % yticks [0.9, 0.1 .. 1.6]
+                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True      
       !figureAction = eGreedyActionCurve
                        % gradientActionCurve
@@ -382,6 +384,7 @@ drawFigure2_6 config = do
                        % xlabel "Paramter (2^x): e / Alpah / c / Q"
                        % ylabel "Optiomal Actions"
                        % yticks [0.2::Double, 0.1 .. 1.0]
+                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
                        % tightLayout
   code figureReward >> code figureAction
