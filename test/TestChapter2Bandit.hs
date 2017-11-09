@@ -62,7 +62,8 @@ testChapter2 configPath = do
   when bCompareTogether (drawExperimentsCurves config 
                               (greedyRewardsCurves % ucbRewardsCurves % gradientRewardsCurves,
                                greedyActionCurves % ucbActionCurves % gradientActionCurves))
-  when bFigure2_6 (pure ())
+  
+  when bFigure2_6 (drawFigure2_6 config)
   pure ()
   
 ------------------------------------------------------------------------------------------
@@ -287,6 +288,106 @@ drawExperimentsCurves config (rewards, actions) = do
   code figureReward >> code figureAction -- avoid Matplotlib's bug
   onscreen figureReward >> onscreen figureAction  
   threadDelay 1000000
-  
-    
 
+
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+-- will take a relative long time ( minutes in a 4 core I5 2.6GHz Cpu)
+greedyEpsilons = [(-7) .. (-1)]
+-- greedy with different initial values and a constant stepSize 0.1
+greedyInitValues = [(-2) .. 3]
+gradientAlpha  = [(-5) .. 2]
+ucbExplore = [(-4) .. 3]
+
+drawFigure2_6 :: Config -> IO ()
+drawFigure2_6 config = do
+  startTime <- getCurrentTime
+  print (show startTime ++ ": Start Figure2_6 Experiment: ")
+  -- read all sample average related params
+  (karm :: Int) <- require config "kArms"
+  (totalStep :: Int) <- require config "totalStep"
+  (totalBandits :: Int) <- require config "totalBandits"
+  
+  -- 1. different epsilons
+  let eGreedyParams = zip3 (map (2.0 ^^) greedyEpsilons) (repeat 0.0) (repeat (-1.0))
+  !eGreedyResults <-
+    mapM (\ (ge, initValue, stepValue) -> do
+            let !greedyRVar = bernoulli ge
+            !ret <- replicateM totalBandits 
+                      (oneBanditGo karm totalStep initValue stepValue (EGreedy greedyRVar))
+            pure $ (sum ret) / (fromIntegral totalBandits)
+         )  eGreedyParams         
+  let !eGreedyAverage = calcAverage 0 totalStep eGreedyResults
+      !eGreedyAction = calcAverage totalStep totalStep eGreedyResults
+      eGreedyAverageCurve = mp % plot greedyEpsilons eGreedyAverage @@ [o2 "label" "epsilon greedy"]
+      eGreedyActionCurve = mp % plot greedyEpsilons eGreedyAction @@ [o2 "label" "epsilon greedy"]
+
+  -- 2. different e-greedy init values with epsilon = 0.0 and stepSize = 0.1
+  let eGreedyInitValParams = zip3 (repeat 0.0) (map (2.0 ^^) greedyInitValues) (repeat 0.1)
+  !eGreedyInitValResults <-
+    mapM (\ (ge, initValue, stepValue) -> do
+            let !greedyRVar = bernoulli ge
+            !ret <- replicateM totalBandits 
+                      (oneBanditGo karm totalStep initValue stepValue (EGreedy greedyRVar))
+            pure $ (sum ret) / (fromIntegral totalBandits)
+         )  eGreedyInitValParams         
+  let !eGreedyInitValAverage = calcAverage 0 totalStep eGreedyInitValResults
+      !eGreedyInitValActions = calcAverage totalStep totalStep eGreedyInitValResults
+      eGreedyInitValAverageCurve = mp % plot greedyInitValues eGreedyInitValAverage
+                                             @@ [o2 "label" "epsilon greedy"]
+      eGreedyInitValActionCurve = mp % plot greedyInitValues eGreedyInitValActions
+                                            @@ [o2 "label" "epsilon greedy"]
+
+  -- 3. ucb with stepSize 0.1  
+  let ucbParams = zip (repeat 0.1) (map (2.0 ^^) ucbExplore)
+  !ucbResults <- mapM (\ (stepSize, ed) -> do
+                         let policy = UCB ed
+                         !ret <- replicateM totalBandits
+                                   (oneBanditGo karm totalStep 0.0 stepSize policy)
+                         pure $ (sum ret) / (fromIntegral totalBandits)
+                      ) ucbParams
+  let !ucbAverage = calcAverage 0 totalStep ucbResults
+      !ucbAction = calcAverage totalStep totalStep ucbResults
+      ucbAverageCurve = mp % plot ucbExplore ucbAverage @@ [o2 "label" "UCB"]                                       
+      ucbActionCurve = mp % plot ucbExplore ucbAction @@ [o2 "label" "UCB"]
+
+  -- 4. gradient method with different alphas and all with baseline
+  let gradientParams = zip (map (2.0 ^^) gradientAlpha) (repeat True)
+  !gradientResults <- mapM (\ (stepSize, bBase) -> do
+                              let policy = Gradient bBase
+                              !ret <- replicateM totalBandits
+                                        (oneBanditGo karm totalStep 0.0 stepSize policy)
+                              pure $ (sum ret) / (fromIntegral totalBandits)
+                           ) gradientParams
+  let !gradientAverage = calcAverage 0 totalStep gradientResults
+      !gradientAction = calcAverage totalStep totalStep gradientResults
+      gradientAverageCurve = mp % plot gradientAlpha gradientAverage @@ [o2 "label" "Gradient"]
+      gradientActionCurve = mp % plot gradientAlpha gradientAction @@ [o2 "label" "Gradient"]
+  
+  -- 5. now draw it
+  let !figureReward = eGreedyAverageCurve
+                       % gradientAverageCurve
+                       % ucbAverageCurve
+                       % eGreedyInitValAverageCurve
+                       % title "A Parameter study of the various bandit algorithms"
+                       % xlabel "Paramter (2^x): e / Alpah / c / Q"
+                       % ylabel "Average Reward"
+                       % yticks [0.9, 0.1 .. 1.6]
+                       % grid True      
+      !figureAction = eGreedyActionCurve
+                       % gradientActionCurve
+                       % ucbActionCurve
+                       % eGreedyInitValActionCurve
+                       % title "A Parameter study of the various bandit algorithms"
+                       % xlabel "Paramter (2^x): e / Alpah / c / Q"
+                       % ylabel "Optiomal Actions"
+                       % yticks [0.2::Double, 0.1 .. 1.0]
+                       % grid True
+                       % tightLayout
+  code figureReward >> code figureAction
+  onscreen figureReward >> onscreen figureAction  
+  threadDelay 500000
+  pure ()  
+  where
+  calcAverage startIdx len =
+    map ((/ (fromIntegral len)) . sum . LA.toList . LA.subVector startIdx len)
