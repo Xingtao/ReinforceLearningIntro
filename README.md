@@ -1,2 +1,1 @@
-# RLHask
-RLHask
+Exercise code for "Reinforcement Leraning Introduction Second Edition"
