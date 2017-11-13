@@ -1,4 +1,4 @@
-Exercise code for "Reinforcement Leraning Introduction Second Edition"
+Code for "Reinforcement Leraning Introduction Second Edition"
 
 ****
 
