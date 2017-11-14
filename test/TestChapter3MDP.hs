@@ -30,39 +30,19 @@ import Graphics.Matplotlib
 import Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 
+import System.Console.AsciiProgress
+
 import Utils
 import Chapter3Bandit
 
 ------------------------------------------------------------------------------------------
 testChapter3 :: FilePath -> IO ()
 testChapter3 configPath = do
-  print "Grid Word Experiment Starting, will take several minutes "
-  
+  print "Chapter 3 Experiment Starting "
   (config, _) <- autoReload autoConfig [Required configPath]
-  (karm :: Int) <- require config "kArms"
-  -- 
-  (bGreedy :: Bool) <- require config "enable.bGreedyExperiment"
-  (bUCB :: Bool) <- require config "enable.bUCBExperiment"
-  (bGradient :: Bool) <- require config "enable.bGradientExperiment"
-  (bCompareTogether :: Bool) <- require config "enable.bCompareTogether"
-  (bFigure2_6 :: Bool) <- require config "enable.bFigure2_6"
-
-  -- do the experiments in order   
-  -- EpsilonGreedy Experiment
-  (greedyRewardsCurves, greedyActionCurves) <- if bGreedy then doEpsilonGreedyTests config
-                                                          else pure (mp, mp)  
-  -- UCB Experiment
-  (ucbRewardsCurves, ucbActionCurves) <- if bUCB then doUCBTests config else pure (mp, mp)
-                                                          
-  -- Gradient Experiment
-  (gradientRewardsCurves, gradientActionCurves) <- if bGradient then doGradientTests config
-                                                      else pure (mp, mp)
+  (bGridWorld :: Bool) <- require config "enable.bGridWorld"
+  when bGridWorld doGridWorldTest config
   
-  when bCompareTogether (drawExperimentsCurves config 
-                              (greedyRewardsCurves % ucbRewardsCurves % gradientRewardsCurves,
-                               greedyActionCurves % ucbActionCurves % gradientActionCurves))
-  
-  when bFigure2_6 (drawFigure2_6 config)
   pure ()
   
 ------------------------------------------------------------------------------------------

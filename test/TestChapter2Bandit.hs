@@ -30,6 +30,8 @@ import Graphics.Matplotlib
 import Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 
+import System.Console.AsciiProgress
+
 import Utils
 import Chapter2Bandit
 
