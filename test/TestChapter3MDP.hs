@@ -30,14 +30,68 @@ import Graphics.Matplotlib
 import Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 
-import System.Console.AsciiProgress
+import System.Console.AsciiProgress(Options(..), displayConsoleRegions,
+                                    isComplete, def, newProgressBar, tick)
+
+import Text.Printf
 
 import Utils
 import Chapter3Bandit
 
 ------------------------------------------------------------------------------------------
+-- World Defs
+
+type World = [[Double]]
+data Action = U | D | L | R deriving (Show)
+type Actions = [Action]
+type Policy = [[Actions]]
+
+-- output in github markdown format
+showWorld :: World -> String
+showWorld world = 
+  let cols | length world == 0 = 0
+           | otherwise = length (head world)
+      alignHeader = (concat . take cols . repeat "|:-----:") ++ "|\n"
+      rowFormat = concat $ map showLine world
+  where
+  showLine [] = "|\n"
+  showLine (x:xs) = "|" ++ (printf ".1f" x :: String) : showLine xs
+
+-- - | left align | center align  | right align |
+-- - | :------------ |:---------------:| -----:|
+-- - | col 1         |  text           | $1    |
+-- - | col 2 is      | centered        |   $12 |
+
+
+------------------------------------------------------------------------------------------
+-- World Operations
+createWorld :: Int -> [[Double]]
+createWorld size = take size . repeat . take size $ repeat 0.0
+
+updateWorldAt :: (Int, Int) -> (Double -> Double) -> World -> World
+updateWorldAt (i, j) f mat
+ | (upperRows, thisRow : lowerRows ) <- splitAt i mat
+ , (leftCells, thisCell: rightCells) <- splitAt j thisRow
+         = upperRows ++ (leftCells ++ (f thisCell): rightCells) : lowerRows
+ | otherwise = error "World out of range"
+
+main :: IO ()
+main = displayConsoleRegions $ do
+
 testChapter3 :: FilePath -> IO ()
-testChapter3 configPath = do
+testChapter3 configPath = displayConsoleRegions $ do
+ pg <- newProgressBar def { pgWidth = 100
+                          , pgOnCompletion = Just "Done :percent after :elapsed seconds"
+                          }
+ loop pg
+ where
+ loop pg = do
+   b <- isComplete pg
+   unless b $ do
+       threadDelay $ 200 * 1000
+       tick pg
+       loop pg
+
   print "Chapter 3 Experiment Starting "
   (config, _) <- autoReload autoConfig [Required configPath]
   (bGridWorld :: Bool) <- require config "enable.bGridWorld"
