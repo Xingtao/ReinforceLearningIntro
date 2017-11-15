@@ -8,30 +8,27 @@ module TestChapter2Bandit (
        testChapter2
       )where
 
-import Control.Monad
-import Control.Monad.Trans.State
-import Control.Concurrent
-import Control.Parallel
-import Control.Parallel.Strategies
-
-import Data.Configurator
-import Data.Configurator.Types
-
-import Data.Random
-import Data.Random.Distribution
-import Data.Random.Distribution.Uniform
-import Data.Random.Distribution.Bernoulli
-import Data.Random.Source.IO
-
-import Data.Text (Text)
-import Data.Time
-import Graphics.Matplotlib
-
-import Numeric.LinearAlgebra (Vector, Matrix)
+import           Control.Monad
+import           Control.Monad.Trans.State (runStateT)
+import           Control.Concurrent
+                  
+import           Data.Configurator
+import           Data.Configurator.Types
+                  
+import           Data.Random
+import           Data.Random.Distribution
+import           Data.Random.Distribution.Uniform
+import           Data.Random.Distribution.Bernoulli
+import           Data.Random.Source.IO
+                  
+import           Data.Text (Text)
+import           Data.Time (getCurrentTime)
+import           Graphics.Matplotlib
+                  
+import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 
-import System.Console.AsciiProgress
-
+-- project
 import Utils
 import Chapter2Bandit
 

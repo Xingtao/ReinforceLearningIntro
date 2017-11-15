@@ -10,26 +10,25 @@ module Chapter2Bandit
     , loopSteps
     ) where
 
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Trans.State
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.State
+                  
+import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
+import           Data.List(take, repeat)
+                  
+import           Data.Random
+import           Data.Random.Distribution
+import           Data.Random.Distribution.Uniform
+import           Data.Random.Shuffle.Weighted                  
+import           Data.Random.Source.IO
 
-import Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
-import Data.List(take, repeat)
-import Data.IORef
-
-import Data.Random
-import Data.Random.Distribution
-import Data.Random.Distribution.Uniform
-import Data.Random.Shuffle.Weighted
-
-import Data.Random.Source.IO
-import Language.Haskell.TH
-
-import Numeric.LinearAlgebra (Vector, Matrix)
+import           Language.Haskell.TH                  
+import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 
-import Utils
+-- project
+import           Utils
 
 ------------------------------------------------------------------------------------------
 

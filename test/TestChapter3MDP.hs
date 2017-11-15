@@ -8,72 +8,17 @@ module TestChapter3MDP (
        testChapter3
       )where
 
-import Control.Monad
-import Control.Monad.Trans.State
-import Control.Concurrent
-import Control.Parallel
-import Control.Parallel.Strategies
-
-import Data.Configurator
-import Data.Configurator.Types
-
-import Data.Random
-import Data.Random.Distribution
-import Data.Random.Distribution.Uniform
-import Data.Random.Distribution.Bernoulli
-import Data.Random.Source.IO
-
-import Data.Text (Text)
-import Data.Time
-import Graphics.Matplotlib
-
-import Numeric.LinearAlgebra (Vector, Matrix)
+import           Control.Monad
+import           Data.Configurator
+import           Data.Configurator.Types                  
+import           Data.Text (Text)
+import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
-
-import System.Console.AsciiProgress(Options(..), displayConsoleRegions,
-                                    isComplete, def, newProgressBar, tick)
-
-import Text.Printf
-
-import Utils
-import Chapter3Bandit
-
-------------------------------------------------------------------------------------------
--- World Defs
-
-type World = [[Double]]
-data Action = U | D | L | R deriving (Show)
-type Actions = [Action]
-type Policy = [[Actions]]
-
--- output in github markdown format
-showWorld :: World -> String
-showWorld world = 
-  let cols | length world == 0 = 0
-           | otherwise = length (head world)
-      alignHeader = (concat . take cols . repeat "|:-----:") ++ "|\n"
-      rowFormat = concat $ map showLine world
-  where
-  showLine [] = "|\n"
-  showLine (x:xs) = "|" ++ (printf ".1f" x :: String) : showLine xs
-
--- - | left align | center align  | right align |
--- - | :------------ |:---------------:| -----:|
--- - | col 1         |  text           | $1    |
--- - | col 2 is      | centered        |   $12 |
-
-
-------------------------------------------------------------------------------------------
--- World Operations
-createWorld :: Int -> [[Double]]
-createWorld size = take size . repeat . take size $ repeat 0.0
-
-updateWorldAt :: (Int, Int) -> (Double -> Double) -> World -> World
-updateWorldAt (i, j) f mat
- | (upperRows, thisRow : lowerRows ) <- splitAt i mat
- , (leftCells, thisCell: rightCells) <- splitAt j thisRow
-         = upperRows ++ (leftCells ++ (f thisCell): rightCells) : lowerRows
- | otherwise = error "World out of range"
+import           System.Console.AsciiProgress(Options(..), displayConsoleRegions,
+                                              isComplete, def, newProgressBar, tick)
+-- project
+import           Utils
+import           Chapter3MDP
 
 main :: IO ()
 main = displayConsoleRegions $ do
