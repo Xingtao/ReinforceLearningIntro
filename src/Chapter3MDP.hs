@@ -4,10 +4,10 @@
 {-# LANGUAGE TypeOperators               #-}
 
 module Chapter3MDP
-    ( Action(..)
+    ( World(..)
     , Policy(..)
-    , World
-    , Actions
+    , Action(..)
+    , step
     ) where
 
 import           Control.Monad
@@ -17,6 +17,7 @@ import           Control.Monad.Trans.State
 import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import           Data.List(take, repeat)
 import qualified Data.Map as M
+import           Data.Maybe
 import           Text.Printf
 
 -- project
@@ -28,25 +29,28 @@ import Utils
 
 ------------------------------------------------------------------------------------------
 -- defs
-data Policy = Random | Optiomal deriving (Show)
+data Policy = PolicyRandom | PolicyOptimal deriving (Show)
 data Action = U | D | L | R deriving (Show)
-type Actions = [Action]
 actions = [U, D, L, R]]
 
-type Value = Double
-type Values = [[Double]]
+type Values = [Double]
 type Reward = Double
 type State = (Int, Int)
 type SAPairMap = M.Map (State, Action) (State, Reward)
 
 data World = World {
-   _stateValues :: Values
- , _tableMap :: SAPairMap
- , _maxSize :: Int
- , _policy :: Policy
+    _stateValues :: Values
+  , _tableMap :: SAPairMap
+  , _maxSize :: Int
+  , _policy :: Policy
+  , _discount :: Double
 } deriving (Show)
 
 makeLenses ''World
+
+instance Read Policy where
+  read "random" = PolicyRandom
+  read "optimal" = PolicyOptimal
 
 -- modify an element of matrix (represent by [[a]] (nxn)) will take O(m), access it in O (n) and modify it in O(n).
 -- list [a] has a constant overhead factor, caused by indirections & cache-locality,
@@ -57,17 +61,17 @@ makeLenses ''World
 ------------------------------------------------------------------------------------------
 -- World Operations
 
-createWorld :: Int -> [(State, State, Reward)] -> World
-createWorld size specials = 
-  let initStateValues = take size . repeat . take size . repeat $ 0.0
+createWorld :: Int -> Policy -> Double -> [(State, State, Reward)] -> World
+createWorld size p gamma specials = 
+  let initStateValues = take (size*size) . repeat $ 0.0
       tableKeys = [((x, y), action) | x <- [0..size-1], y <- [0..size-1], action <- actions]
-      tableValues = doInitTableValues $ initKeys
+      tableValues = doInitTableMap initKeys
       tableMap = updateSpecials specials . M.fromList $ zip tableKeys tableValues
-  in  World initStateValues tableMap size
+  in  World initStateValues tableMap size p gamma
   where
-  doInitTableValues :: [(State, Action)] -> [(State, Reward)]
-  doInitTableValues [] = []
-  doInitTableValues (x@(s, a) : xs)
+  doInitTableMap :: [(State, Action)] -> [(State, Reward)]
+  doInitTableMap [] = []
+  doInitTableMap (x@(s, a) : xs)
     | isOutOfRange size s (toMove a) = (s, negate 1)
     | otherwise = ((fst s + fst (toMove a), (snd s + snd (toMove a)), 0)
   
@@ -101,8 +105,8 @@ isOutOfRange maxSize s@(x, y) (x', y')
   | x + x' < 0 || x + x' >= maxSize || y + y' < 0 || y + y' >= maxSize = True
   | otherwise = False
 
-valueOfState :: Values -> State -> Value
-valueOfState values s = values !! fst s !! snd s
+valueOfState :: Values -> State -> Int -> Value
+valueOfState values s size = values !! (fst s * size + snd s)
 
 toMove :: Action -> (Int, Int)
 toMove U = (0, negate 1)
@@ -115,12 +119,29 @@ toMove U = (1, 0)
 
 step :: State World Double
 step = do
-  s <- get
-  s' <- updateState s
-  put s'
-  let convergeDiff = sum $ zipWith (sum . zipWith (abs . (-))) (_stateValues s) (_stateValues s')
+  w <- get
+  w' <- updateState s
+  put w'
+  let convergeDiff = sum $ zipWith (sum . zipWith (abs . (-))) (_stateValues w) (_stateValues w')
   pure convergeDiff
-  where
 
 updateState :: World -> World
-updateState s = 
+updateState w =
+  let size = _maxSize w
+      table = _tableMap w
+      values = _stateValues w
+      stateIdxs = [(x, y) | x <- [0..size-1], y <- [0..size-1]]
+      updateValues =  map (go table values) stateIdxs
+  in  w {_stateValues = updateValues}
+  where
+  go :: SAPairMap -> Values -> State -> Double
+  go table values s =
+    case _policy w of
+      PolicyRandom -> -- Bellman Equation
+        sum $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
+                          in  0.25 * (r + (_discount w) * (valueOfState s'))
+                  ) actions
+      PolicyOptimal -> -- Bellman Optimality Equation
+        snd . argmaxWithIndex $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
+                                            in  0.25 * (r + (_discount w) * (valueOfState s'))
+                                    ) actions
