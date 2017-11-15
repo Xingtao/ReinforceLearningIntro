@@ -87,6 +87,7 @@ mkBandit karm totalStep initValue stepSize trueValues policy =
       )
 
 --------------------------------------------------------------------------------
+---- learning
 
 loopSteps :: Int -> StateT Bandit IO [Double]
 loopSteps times = replicateM times step
@@ -128,7 +129,7 @@ takeOneAction actionN = do
                        & (totalReward +~ reward)
                        & (curStep +~ 1)
                        & (bestTakes %~ (++ [bestTake]))
-      bandit'' = stateUpdate bandit' actionN reward      
+      bandit'' = stateUpdate bandit' actionN reward
   put bandit''
   pure reward
   where
