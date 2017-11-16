@@ -54,17 +54,22 @@ doGridWorldTest config = do
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
                              }
-    loop pg world
+    loop pg world 1
     print "finish chapter3 experiments"
     where
-    loop pg world = do
+    loop pg world count = do
       let (diff, w') = runState step world
+      when (count `mod` 10 == 0)
+           (do
+            print ("Iteration " ++ show count)
+            putStr $ showStateValues (_maxSize w') (_stateValues w')
+           )
       case diff < learningAccuracy of
          False -> do
            stat <- getProgressStats pg
            let ticked = stCompleted stat
                percent = floor (100.0 / (diff / learningAccuracy))
            when (ticked < percent) (tickN pg (fromInteger $ percent - ticked))
-           loop pg w'
-         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))        
+           loop pg w' (count + 1)
+         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))
       

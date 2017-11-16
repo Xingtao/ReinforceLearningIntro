@@ -28,6 +28,9 @@ import           Graphics.Matplotlib
 import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 
+import           System.Console.AsciiProgress(Options(..), Stats(..),
+                                              displayConsoleRegions, complete,
+                                              getProgressStats, def, newProgressBar, tickN)
 -- project
 import Utils
 import Chapter2Bandit
