@@ -24,7 +24,7 @@ import           Utils
 import           Chapter3MDP
 
 testChapter3 :: FilePath -> IO ()
-testChapter3 configPath = displayConsoleRegions $ do
+testChapter3 configPath = do
   print "Chapter 3 Experiment Starting "
   (config, _) <- autoReload autoConfig [Required configPath]
   (bGridWorld :: Bool) <- require config "enable.bGridWorld"
@@ -44,7 +44,7 @@ doGridWorldTest config = do
   -- do experiments
   mapM_ (goOnePolicyTest size discountGamma learningAccuracy specials) policies
   where
-  goOnePolicyTest size discountGamma learningAccuracy specials aPolicy = do
+  goOnePolicyTest size discountGamma learningAccuracy specials aPolicy = displayConsoleRegions $ do
     print ("Will do experiment with policy " ++ aPolicy)
     putStrLn ("Special positions: " ++ show specials)
     let thePolicy = read aPolicy
@@ -57,7 +57,6 @@ doGridWorldTest config = do
     where
     loop pg world = do
       let (diff, w') = runState step world
-      putStr $ showStateValues (_maxSize w') (_stateValues w')
       case diff < learningAccuracy of
          False -> tick pg >> loop pg w' 
          True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))

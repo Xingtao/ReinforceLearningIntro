@@ -17,7 +17,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.State
 
 import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
-import           Data.List(take, repeat, sort)
+import           Data.List(take, repeat, sortOn)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Text.Printf
@@ -91,7 +91,7 @@ showStateValues size values =
   where
   showRows ([], _) = "|\n"
   showRows (row, others) =
-    (concat $ map (\ x -> "|" ++ (printf "%.2f" x :: String)) row) ++ "|\n" ++ 
+    (concat $ map (\ x -> "|" ++ (printf "%7.2f" x :: String)) row) ++ "|\n" ++ 
              (showRows $ splitAt size others)
 
 ------------------------------------------------------------------------------------------
@@ -104,6 +104,7 @@ isOutOfRange maxSize s@(x, y) (x', y')
 valueOfState :: Values -> StateCoor -> Int -> Double
 valueOfState values s size = values !! (snd s * size + fst s)
 
+-- not used
 setValueOfState :: Values -> StateCoor -> Int -> Double -> Values
 setValueOfState values s size val =
   let (lefts, rights) = splitAt (snd s * size + fst s) values
@@ -132,9 +133,9 @@ updateState w =
       table = _tableMap w
       values = _stateValues w
       stateIdxs = [(x, y) | x <- [0..size-1], y <- [0..size-1]]
-      updateValues = map (go table values size) stateIdxs
-      updateValues' = reorder size stateIdxs updateValues updateValues 
-  in  w {_stateValues = updateValues'}
+      stateIdxs' = sortOn snd stateIdxs
+      updateValues = map (go table values size) stateIdxs'
+  in  w {_stateValues = updateValues}
   where
   go :: SAPairMap -> Values -> Int -> StateCoor -> Double
   go table values size s =
@@ -147,8 +148,3 @@ updateState w =
         argmax $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
                              in  r + (_discount w) * (valueOfState values s' size)
                      ) actions
-  reorder :: Int -> [StateCoor] -> Values -> Values -> Values
-  reorder _ [] _ dst = dst
-  reorder size (x:xs) src dst =
-    let dst' = setValueOfState dst x size (valueOfState src x size)
-    in  reorder size xs src dst'
