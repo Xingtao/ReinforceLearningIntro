@@ -17,8 +17,9 @@ import           Data.Configurator.Types
 import           Data.Text (Text)
 import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
-import           System.Console.AsciiProgress(Options(..), displayConsoleRegions, complete,
-                                              isComplete, def, newProgressBar, tick)
+import           System.Console.AsciiProgress(Options(..), Stats(..),
+                                              displayConsoleRegions, complete,
+                                              getProgressStats, def, newProgressBar, tickN)
 -- project
 import           Utils
 import           Chapter3MDP
@@ -50,6 +51,7 @@ doGridWorldTest config = do
     let thePolicy = read aPolicy
         world = createWorld size thePolicy discountGamma specials
     pg <- newProgressBar def { pgWidth = 80
+                             , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
                              }
     loop pg world
@@ -58,9 +60,11 @@ doGridWorldTest config = do
     loop pg world = do
       let (diff, w') = runState step world
       case diff < learningAccuracy of
-         False -> tick pg >> loop pg w' 
-         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))
-        
+         False -> do
+           stat <- getProgressStats pg
+           let ticked = stCompleted stat
+               percent = floor (100.0 / (diff / learningAccuracy))
+           when (ticked < percent) (tickN pg (fromInteger $ percent - ticked))
+           loop pg w'
+         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))        
       
-      
-     
