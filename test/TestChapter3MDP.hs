@@ -57,9 +57,10 @@ doGridWorldTest config = do
     where
     loop pg world = do
       let (diff, w') = runState step world
+      putStr $ showStateValues (_maxSize w') (_stateValues w')
       case diff < learningAccuracy of
-         False -> tick pg >> loop pg w'
-         True -> complete pg
+         False -> tick pg >> loop pg w' 
+         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))
         
       
       
