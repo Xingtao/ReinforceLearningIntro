@@ -1,6 +1,7 @@
 module Main where
 
 import TestChapter2Bandit
+import TestChapter3MDP
 
 main :: IO ()
 main = do
