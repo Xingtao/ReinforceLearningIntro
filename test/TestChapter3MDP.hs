@@ -9,26 +9,26 @@ module TestChapter3MDP (
       )where
 
 import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.State
+
 import           Data.Configurator
 import           Data.Configurator.Types                  
 import           Data.Text (Text)
 import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
-import           System.Console.AsciiProgress(Options(..), displayConsoleRegions,
+import           System.Console.AsciiProgress(Options(..), displayConsoleRegions, complete,
                                               isComplete, def, newProgressBar, tick)
 -- project
 import           Utils
 import           Chapter3MDP
-
-main :: IO ()
-main = displayConsoleRegions $ do
 
 testChapter3 :: FilePath -> IO ()
 testChapter3 configPath = displayConsoleRegions $ do
   print "Chapter 3 Experiment Starting "
   (config, _) <- autoReload autoConfig [Required configPath]
   (bGridWorld :: Bool) <- require config "enable.bGridWorld"
-  when bGridWorld doGridWorldTest config
+  when bGridWorld (doGridWorldTest config)
  
 doGridWorldTest :: Config -> IO () 
 doGridWorldTest config = do
@@ -39,34 +39,28 @@ doGridWorldTest config = do
   (specialPositions::[[Int]]) <- require config "gridWorld.specialPositions"
   (specialTransitPos::[[Int]]) <- require config "gridWorld.specialTransitPos"
   (specialRewards::[Double]) <- require config "gridWorld.specialRewards"
-  let specials = zipWith (\ src dst r -> ((src!!0, src!!1), (dst!!0, dst!!1), r)
-                         specialPositions specialTransitPos specialRewards
+  let specials = zipWith3 (\ src dst r -> ((src!!0, src!!1), (dst!!0, dst!!1), r))
+                                          specialPositions specialTransitPos specialRewards
   -- do experiments
-  mapM_ (goOnePolicyTest size discount learningAccuracy specials) policies
+  mapM_ (goOnePolicyTest size discountGamma learningAccuracy specials) policies
   where
-  goOnePolicyTest size discountGamma learningAccuracy specials) p = do
-    print ("Will do experiment with policy " ++ p ++ " and special positions" ++ show specials)
-   
-
-
-  createWorld :: Int -> Policy -> Double -> [(State, State, Reward)] -> World
-  createWorld size p gamma specials = 
-
-     specialPositions  = [[0, 1], [0, 4]]
-     specialTransitPos = [[1, 4], [3, 2]]
-     specialRewards    = [10.0,   5.0]
-
-  pg <- newProgressBar def { pgWidth = 100
-                           , pgOnCompletion = Just "Done :percent after :elapsed seconds"
-                           }
-  loop pg
-  print "finish chapter3 experiments"
-  pure ()
-  where
-  loop pg = do
-    b <- isComplete pg
-    unless b $ do
-        threadDelay $ 200 * 1000
-        tick pg
-        loop pg  
-  
+  goOnePolicyTest size discountGamma learningAccuracy specials aPolicy = do
+    print ("Will do experiment with policy " ++ aPolicy)
+    putStrLn ("Special positions: " ++ show specials)
+    let thePolicy = read aPolicy
+        world = createWorld size thePolicy discountGamma specials
+    pg <- newProgressBar def { pgWidth = 80
+                             , pgOnCompletion = Just "Done :percent after :elapsed seconds"
+                             }
+    loop pg world
+    print "finish chapter3 experiments"
+    where
+    loop pg world = do
+      let (diff, w') = runState step world
+      case diff < learningAccuracy of
+         False -> tick pg >> loop pg w'
+         True -> complete pg
+        
+      
+      
+     

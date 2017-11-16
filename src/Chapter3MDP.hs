@@ -9,6 +9,7 @@ module Chapter3MDP
     , Action(..)
     , step
     , showStateValues
+    , createWorld
     ) where
 
 import           Control.Monad
@@ -31,7 +32,7 @@ import Utils
 ------------------------------------------------------------------------------------------
 -- defs
 data Policy = PolicyRandom | PolicyOptimal deriving (Show)
-data Action = U | D | L | R deriving (Show)
+data Action = U | D | L | R deriving (Show, Ord, Eq)
 actions = [U, D, L, R]
 
 type Values = [Double]
@@ -105,9 +106,9 @@ valueOfState values s size = values !! (fst s * size + snd s)
 
 toMove :: Action -> (Int, Int)
 toMove U = (0, negate 1)
-toMove U = (0, 1)
-toMove U = (negate 1, 0)
-toMove U = (1, 0)
+toMove D = (0, 1)
+toMove L = (negate 1, 0)
+toMove R = (1, 0)
 
 ------------------------------------------------------------------------------------------
 -- Learning 
@@ -126,7 +127,7 @@ updateState w =
       table = _tableMap w
       values = _stateValues w
       stateIdxs = [(x, y) | x <- [0..size-1], y <- [0..size-1]]
-      updateValues =  map (go table values) stateIdxs
+      updateValues = map (go table values size) stateIdxs
   in  w {_stateValues = updateValues}
   where
   go :: SAPairMap -> Values -> Int -> StateCoor -> Double
@@ -137,6 +138,6 @@ updateState w =
                           in  0.25 * (r + (_discount w) * (valueOfState values s' size))
                   ) actions
       PolicyOptimal -> -- Bellman Optimality Equation
-        snd . argmaxWithIndex $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
-                                            in  0.25 * (r + (_discount w) * (valueOfState values s' size))
-                                    ) actions
+        argmax $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
+                             in  r + (_discount w) * (valueOfState values s' size)
+                     ) actions
