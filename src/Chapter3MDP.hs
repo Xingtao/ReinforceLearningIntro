@@ -86,8 +86,9 @@ createWorld size p gamma specials =
 -- output in github markdown format
 showStateValues :: Int -> Values -> String
 showStateValues size values = 
-  let alignHeader = (concat . take size $ repeat "|:-----:") ++ "|\n"      
-  in  alignHeader ++ (showRows (splitAt size values))
+  let header = (concat . take size $ repeat "| ") ++ "|\n"      
+      alignHeader = (concat . take size $ repeat "|:-----:") ++ "|\n"      
+  in  header ++ alignHeader ++ (showRows (splitAt size values))
   where
   showRows ([], _) = "|\n"
   showRows (row, others) =
@@ -124,7 +125,7 @@ step = do
   w <- get
   let w' = updateState w
   put w'
-  let convergeDiff = sum $ zipWith ((abs .) . (-)) (_stateValues w) (_stateValues w')
+  let convergeDiff = argmax $ zipWith ((abs .) . (-)) (_stateValues w) (_stateValues w')
   pure convergeDiff
 
 updateState :: World -> World
