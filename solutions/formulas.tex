@@ -1,10 +1,21 @@
 \documentclass{article}
+\usepackage{latexsym,bm,amsmath,amssymb}
 \begin{document}
-% all math formulars
 
-% exercise 2.1
-$$\mbox{ $x>0$}, \mbox{  }f(x)>0. $$
-
-
+%\begin{flushleft}
+\[
+  \begin{aligned}
+  % Bellman Equation & Bellman Optimality Equation: value function & action-value function
+  v_{\pi}(s) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s] \\
+  &= \sum_{a}\pi(a|s) \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(s')]\\
+  \\
+  v_{*}(s) &= \max_{a}\mathbb{E}[R_{t+1} + \gamma v_{*}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
+  &= \max_{a}\sum_{s',r}p(s',r|s,a)[r + \gamma v_{*}(s')]\\
+  \\
+  q_{*}(s,a) &= \mathbb{E}[R_{t+1} + \gamma \max_{a'}q_{*}(S_{t+1}, a') | S_{t}=s, A_{t}=a]\\
+  &= \sum_{s',r}(s',r|s,a)[r + \gamma \max_{a'}]
+  \end{aligned}
+\]
+%\end{flushleft}
 
 \end{document}
