@@ -17,9 +17,7 @@ import           Data.List(take, repeat)
                   
 import           Data.Random
 import           Data.Random.Distribution
-import           Data.Random.Distribution.Uniform
-import           Data.Random.Shuffle.Weighted                  
-import           Data.Random.Source.IO
+import           Data.Random.Distribution.Poisson
 
 import           Language.Haskell.TH                  
 import           Numeric.LinearAlgebra (Vector, Matrix)
@@ -30,44 +28,49 @@ import           Utils
 
 ------------------------------------------------------------------------------------------
 -- | Dynamic Programming Experiments: Car Rental & Gamblers Problem
+--   States: Number of cars in each location, represent
+--   Actions: Number of cars Transferred between locations
+--   Returns: rental credit, transfer cost, parking cost, additional saveings
 
 ------------------------------------------------------------------------------------------
 data CarRental = CarRental {
-     _kArms :: Int
-    ,_bestValueIdx :: Int -- it is pre-known, for OptimalAction statistics
-    ,_qValues :: ![Double] -- estimate value of each action
-    ,_nActions :: ![Int] -- count of each atcion has taken
-    ,_stepSize :: Double
-    ,_totalReward :: !Double
-    ,_curStep :: !Int
-    ,_bestTakes :: ![Double]
+     _locationNum :: Int
+    ,_discount :: Double
+    ,_maxCars :: [Int]
+    ,_rentalCredit :: [Double]
+    ,_transferCost :: [Double]
+    ,_maxTransferCars :: [Double]
+    ,_freeParkingLimit :: [Int]
+    ,_additionalParkingCost :: [Double]
+    ,_additionalTransferSaving :: [Double]
     -- input randoms
-    ,_rentPoissonR :: ![RVar Int]
-    ,_returnPoissonR :: ![RVar Int]
-    -- exploit & explore methods
-    ,_policy :: Policy
+    ,_rentPoissonR :: [RVar Int]
+    ,_returnPoissonR :: [RVar Int]
+    -- state & action
+    ,_stateValues :: [Double] -- will do in place update
+    ,_actions :: M.Map [Int] [[Int]] -- 
     }
 
 makeLenses ''CarRental
 
-mkCarRental :: Int -> Int -> Double -> Double -> [Double] -> Policy -> Bandit
-mkCarRental karm totalStep initValue stepSize trueValues policy = 
-  let (maxValueIdx, _) = argmaxWithIndex (zip [0..] trueValues)
-  in  (Bandit karm maxValueIdx (take karm $ repeat initValue) 
-              (take karm $ repeat 0) stepSize 0.0 0 []
-              (map (flip normal 1.0) trueValues) policy
-      )
+mkCarRental :: Int -> Double -> [Int] -> [Double] -> [Double] ->
+                      [Int] -> [Double] -> [Double] -> [RVar Int] -> [RVar Int] -> CarRental
+mkCarRental n gamma max earns trans frees parks savings rentR returnR = 
+  CarRental n gamma max earns trans frees parks savings rentR returnR stateVals acts
+  where
+  stateVals = take (n*max) $ repeat 0.0
+  acts = 
 
 --------------------------------------------------------------------------------
----- learning
+---- learning: Policy Iteration: In Place Update
 
-loopSteps :: Int -> StateT Bandit IO [Double]
+loopSteps :: Int -> StateT CarRental IO [Double]
 loopSteps times = replicateM times step
 
-step :: StateT Bandit IO Double
+step :: StateT CarRental IO Double
 step = selectOneAction >>= takeOneAction
 
-selectOneAction :: StateT Bandit IO Int
+selectOneAction :: StateT CarRental IO Int
 selectOneAction = do
   bandit <- get
   actionN <- case _policy bandit of
@@ -92,7 +95,7 @@ selectOneAction = do
   calcUCB :: Int -> Int -> Double -> Double
   calcUCB total n val = val + sqrt ((log $ fromIntegral total) / fromIntegral n)
   
-takeOneAction :: Int -> StateT Bandit IO Double
+takeOneAction :: Int -> StateT CarRental IO Double
 takeOneAction actionN = do
   bandit <- get
   reward <- liftIO $ sample (_srcRVars bandit !! actionN)
@@ -105,7 +108,7 @@ takeOneAction actionN = do
   put bandit''
   pure reward
   where
-  stateUpdate :: Bandit -> Int -> Double -> Bandit
+  stateUpdate :: CarRental -> Int -> Double -> CarRental
   stateUpdate bandit actionN reward =
     let actionTakes = (_nActions bandit) !! actionN
         ss = (_stepSize bandit < 0) ? (1.0 / fromIntegral actionTakes, _stepSize bandit)

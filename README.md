@@ -1,4 +1,5 @@
-#### Selected Reference Solutions & Experiment Code for ___"Reinforcement Leraning Introduction Second Edition"___
+#### Selected Reference Solutions & Experiment Code for ___"Reinforcement Leraning Introduction Second Edition([Complete Draft](www.incompleteideas.net/sutton/book/bookdraft2017nov5.pdf)"___
+
 
 ***
 
