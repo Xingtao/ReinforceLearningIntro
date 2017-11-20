@@ -1,20 +1,17 @@
 ## Selected Reference Solution For Chapter 4
 
-`Exercise 4.1 (P61)` 
+`Exercise 4.1`
+![alt text](figures/4-1.png "Exercise 4.1")
 
 ---
 
 ## Experiments Results For Chapter 4
 
-### Grid World
+### 1. Car Rental 
 
-`WorldSize = 5, discount = 0.9, Optimal Policy`
+__Car Rental__
+![alt text](figures/carRental.png "Car Rental Using Policy Iteration")
 
-#### _Iteration 100_
-||||||
-|:-----:|:-----:|:-----:|:-----:|:-----:|
-|  21.98|  24.42|  21.98|  19.42|  17.48|
-|  19.78|  21.98|  19.78|  17.80|  16.02|
-|  17.80|  19.78|  17.80|  16.02|  14.42|
-|  16.02|  17.80|  16.02|  14.42|  12.98|
-|  14.42|  16.02|  14.42|  12.98|  11.68|
+### Car Rental Exercise 4.5
+__Car Rental__
+![alt text](figures/4-5.png "Car Rental Exercise 4.5")

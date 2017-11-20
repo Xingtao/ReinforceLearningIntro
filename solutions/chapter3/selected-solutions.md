@@ -1,6 +1,7 @@
 ## Selected Reference Solution For Chapter 3
 
-`Exercise 3.21` (P53)  v*((1,0)) = max q*((1,0), a) = 10 + 0.9^5 * v*((1,0))
+`Exercise 3.21`
+![alt text](figures/3-21.png "Exercise 3.21")
 
 ---
 
