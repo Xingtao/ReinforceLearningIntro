@@ -51,7 +51,7 @@ data CarRental = CarRental {
     -- state & action: using the same index
     ,_states :: Seq [Int]
     ,_greedyAction :: Seq Int
-    ,_possibleActions :: Seq [[Int]] -- actions
+    ,_possibleActions :: Seq [[Int]] -- transfer out
     ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
     }
 
@@ -63,15 +63,26 @@ mkCarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings
   CarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR
             (Seq.fromList allStates) initActions (Seq.fromList possibleActions) stateVals
   where
-  allStates = generatePossiblities maxCarNums
+  allStates = generateStates maxCarNums
   initActions = Seq.fromList . take (n*max) $ repeat 0
   stateVals = Seq.fromList . take (n*max) $ repeat 0.0
-  possibleActions = filterPossibles allStates maxCarNums $ generatePossiblities maxTrans
+  possibleActions = filterPossibles allStates maxCarNums $ generateMoves maxTrans
 
--- generate all states for multiple locations or all possible transfer actions
-generatePossiblities :: [Int] -> [[Int]]
-generatePossiblities [] = [[]]
-generatePossiblities (x:xs) = [(y:ys) | y <- [0..x], ys <- generateKey xs]
+-- generate all states for multiple locations
+generateStates :: [Int] -> [[Int]]
+generateStates [] = [[]]
+generateStates (x:xs) = [(y:ys) | y <- [0..x], ys <- generateKey xs]
+
+-- generate one location's tansfer out possibilities
+generateOneMove :: Int -> Int -> [[Int]]
+generateOneMove 0   n = [[]]
+generateOneMove len n = [(x:xs) | x <- [0..n-1], xs <- generateOneMove (len - 1) n, sum (x:xs) <= n]
+
+generateMoves :: [Int] -> [[[Int]]]
+generateMoves trans = go moves 
+  where
+  moves = map (generateOneMove (length trans)) trans
+
 
 -- generate all actions for a given state
 filterPossibles :: [[Int]] -> [Int] -> [[Int]] -> [[[Int]]]
