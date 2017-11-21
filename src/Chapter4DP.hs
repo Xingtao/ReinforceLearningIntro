@@ -14,6 +14,8 @@ import           Control.Monad.Trans.State
                   
 import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import           Data.List(take, repeat)
+import qualified Data.Sequence as Seq
+import qualified Data.Map as M
                   
 import           Data.Random
 import           Data.Random.Distribution
@@ -46,20 +48,42 @@ data CarRental = CarRental {
     -- input randoms
     ,_rentPoissonR :: [RVar Int]
     ,_returnPoissonR :: [RVar Int]
-    -- state & action
-    ,_stateValues :: [Double] -- will do in place update
-    ,_actions :: M.Map [Int] [[Int]] -- 
+    -- state & action: using the same index
+    ,_states :: Seq [Int]
+    ,_greedyAction :: Seq Int
+    ,_possibleActions :: Seq [[Int]] -- actions
+    ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
     }
 
 makeLenses ''CarRental
 
 mkCarRental :: Int -> Double -> [Int] -> [Double] -> [Double] ->
                       [Int] -> [Double] -> [Double] -> [RVar Int] -> [RVar Int] -> CarRental
-mkCarRental n gamma max earns trans frees parks savings rentR returnR = 
-  CarRental n gamma max earns trans frees parks savings rentR returnR stateVals acts
+mkCarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR = 
+  CarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR
+            (Seq.fromList allStates) initActions (Seq.fromList possibleActions) stateVals
   where
-  stateVals = take (n*max) $ repeat 0.0
-  acts = 
+  allStates = generatePossiblities maxCarNums
+  initActions = Seq.fromList . take (n*max) $ repeat 0
+  stateVals = Seq.fromList . take (n*max) $ repeat 0.0
+  possibleActions = filterPossibles allStates maxCarNums $ generatePossiblities maxTrans
+
+-- generate all states for multiple locations or all possible transfer actions
+generatePossiblities :: [Int] -> [[Int]]
+generatePossiblities [] = [[]]
+generatePossiblities (x:xs) = [(y:ys) | y <- [0..x], ys <- generateKey xs]
+
+-- generate all actions for a given state
+filterPossibles :: [[Int]] -> [Int] -> [[Int]] -> [[[Int]]]
+filterPossibles [] _ _ = []
+filterPossibles (x:xs) maxCarNums possibleMoves =
+  filter (go s maxCarNums) possibleMoves : filterPossibles xs maxCarNums possibleMoves
+  where
+  -- the same len of the three argments
+  go :: [Int] -> [Int] -> [Int] -> Bool
+  go s maxCarNums move = 
+  go (x:xs) = [(y:ys) | y <-[0..x], ys <- go xs]
+
 
 --------------------------------------------------------------------------------
 ---- learning: Policy Iteration: In Place Update
