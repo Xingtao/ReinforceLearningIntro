@@ -4,24 +4,24 @@
 {-# LANGUAGE TypeOperators               #-}
 
 module Chapter4Bandit
-    ( 
+    (
     , loopSteps
     ) where
 
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.State
-                  
+
 import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import           Data.List(take, repeat)
 import qualified Data.Sequence as Seq
 import qualified Data.Map as M
-                  
+
 import           Data.Random
 import           Data.Random.Distribution
 import           Data.Random.Distribution.Poisson
 
-import           Language.Haskell.TH                  
+import           Language.Haskell.TH
 import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 
@@ -59,7 +59,7 @@ makeLenses ''CarRental
 
 mkCarRental :: Int -> Double -> [Int] -> [Double] -> [Double] ->
                       [Int] -> [Double] -> [Double] -> [RVar Int] -> [RVar Int] -> CarRental
-mkCarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR = 
+mkCarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR =
   CarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR
             (Seq.fromList allStates) initActions (Seq.fromList possibleActions) stateVals
   where
@@ -78,23 +78,26 @@ generateOneMove :: Int -> Int -> [[Int]]
 generateOneMove 0   n = [[]]
 generateOneMove len n = [(x:xs) | x <- [0..n-1], xs <- generateOneMove (len - 1) n, sum (x:xs) <= n]
 
+-- combine all possible transfer moves
 generateMoves :: [Int] -> [[[Int]]]
-generateMoves trans = go moves 
+generateMoves trans = go moves
   where
+  go [] = [[]]
+  go (x:xs) = [(y:ys) | y <- x, ys <- go xs]
   moves = map (generateOneMove (length trans)) trans
 
-
--- generate all actions for a given state
-filterPossibles :: [[Int]] -> [Int] -> [[Int]] -> [[[Int]]]
+-- filter impossible transfer moves
+filterPossibles :: [[Int]] -> [Int] -> [[[Int]]] -> [[[Int]]]
 filterPossibles [] _ _ = []
-filterPossibles (x:xs) maxCarNums possibleMoves =
-  filter (go s maxCarNums) possibleMoves : filterPossibles xs maxCarNums possibleMoves
+filterPossibles (s:ss) maxCarNums possibleMoves =
+  filter (go maxCarNums s move) possibleMoves : filterPossibles xs maxCarNums possibleMoves
   where
-  -- the same len of the three argments
-  go :: [Int] -> [Int] -> [Int] -> Bool
-  go s maxCarNums move = 
-  go (x:xs) = [(y:ys) | y <-[0..x], ys <- go xs]
-
+  go :: [Int] -> [Int] -> [[Int]] -> Bool
+  go maxCarNums s move =
+    let moveLocationNums = foldl (zipWith (+)) (take (length s) $ repeat 0) move
+        c1 = and $ zipWith3 (\ x y z -> x + y <= z) s moveLocationNums maxCarNums
+        c2 = zipWith3 (\ index curNum m -> m!!index == 0 && sum m <= curNum) [0..] s move
+    in  c1 && c2
 
 --------------------------------------------------------------------------------
 ---- learning: Policy Iteration: In Place Update
@@ -110,7 +113,7 @@ selectOneAction = do
   bandit <- get
   actionN <- case _policy bandit of
     EGreedy epsilonRVar -> do
-      bExplore <- liftIO $ sample epsilonRVar            
+      bExplore <- liftIO $ sample epsilonRVar
       if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
          else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
     UCB c -> do
@@ -129,7 +132,7 @@ selectOneAction = do
   where
   calcUCB :: Int -> Int -> Double -> Double
   calcUCB total n val = val + sqrt ((log $ fromIntegral total) / fromIntegral n)
-  
+
 takeOneAction :: Int -> StateT CarRental IO Double
 takeOneAction actionN = do
   bandit <- get
@@ -159,8 +162,8 @@ takeOneAction actionN = do
           -- epsilone greedy & ucb use the same updating formular
           _ -> let newEstValue = oldEstValue + (reward - oldEstValue) * ss
                in  bandit & (qValues . element actionN .~ newEstValue)
-  
-  updateGradientPreference :: Double -> Double -> Double -> Double -> Double -> Int -> Double 
+
+  updateGradientPreference :: Double -> Double -> Double -> Double -> Double -> Int -> Double
   updateGradientPreference reward baseline ss oldVal prob actionIdx =
     (actionN == actionIdx) ? (oldVal + ss * (reward - baseline) * (1 - prob),
                               oldVal - ss * (reward - baseline) * prob)
