@@ -100,7 +100,7 @@ selectOneAction = do
   bandit <- get
   actionN <- case _policy bandit of
     EGreedy epsilonRVar -> do
-      bExplore <- liftIO $ sample epsilonRVar            
+      bExplore <- liftIO $ sample epsilonRVar
       if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
          else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
     UCB c -> do

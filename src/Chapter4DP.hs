@@ -19,15 +19,13 @@ import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import           Data.List(take, repeat)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import qualified Data.Map as M
+import           Data.Foldable (toList)
 
 import           Data.Random
 import           Data.Random.Distribution
 import           Data.Random.Distribution.Poisson
 
 import           Language.Haskell.TH
-import           Numeric.LinearAlgebra (Vector, Matrix)
-import qualified Numeric.LinearAlgebra as LA
 
 -- project
 import           Utils
@@ -58,7 +56,8 @@ data CarRental = CarRental {
     ,_returnPoissonR :: [RVar Int]
     -- state & action: using the same index
     ,_states :: Seq [Int]
-    ,_greedyAction :: Seq Int
+    -- if < 0, using stochastic policy (try every action equprob) as initial policy
+    ,_actions :: Seq Int 
     ,_possibleActions :: Seq (Seq [[Int]]) -- transfer out for each location
     ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
     } deriving (Show)
@@ -72,8 +71,8 @@ mkCarRental nLocations theTheta gamma maxCarNums earns transCost maxTrans freeLi
             (Seq.fromList allStates) initActions (Seq.fromList $ map Seq.fromList possibleActions) stateVals
   where
   allStates = generateStates maxCarNums
-  initActions = Seq.fromList . take (sum $ map (nLocations*) maxCarNums) $ repeat 0
-  stateVals = Seq.fromList . take (sum $ map (nLocations*) maxCarNums) $ repeat 0.0
+  initActions = Seq.fromList . take (length allStates) $ repeat (-1)
+  stateVals = Seq.fromList . take (length allStates) $ repeat 0.0
   possibleActions = filterPossibilities allStates maxCarNums $ generateMoves maxTrans
 
 -- generate all states for multiple locations
@@ -108,18 +107,88 @@ filterPossibilities (s:ss) maxCarNums possibleMoves =
     in  c1 && c2
 
 --------------------------------------------------------------------------------
----- learning: Policy Iteration (In Place Update). Page-65
+---- learning: Policy Iteration Page-65 (Not In Place Update)
+----           Initially use stochastic policy, then use greedy 
 
 step :: StateT CarRental IO (Bool, Int)
-step = policyEvaluation >> policyImprovement
+step = get >>= policyEvaluation >>= put >> get >>= policyImprovement
 
-policyEvaluation :: StateT CarRental IO Bool
-policyEvaluation = do
-  carRental <- get
-  pure True
+-- TODO: not take parking, saving into account
+policyEvaluation :: CarRental -> StateT CarRental IO CarRental
+policyEvaluation carRental = do
+  let oldStateValues = _stateValues carRental
+  newStateValues <- updateStateValues carRental oldStateValues
+  let carRental' = carRental & (stateValues .~ newStateValues)
+      convergeDiff = argmax (Seq.zipWith ((abs .) . (-))
+                                         newStateValues oldStateValues)
+  if convergeDiff < (_theta carRental)
+     then pure carRental'
+     else policyEvaluation carRental'
 
-policyImprovement :: StateT CarRental IO (Bool, Int)
-policyImprovement = do
-  carRental <- get
-  pure (True, 100)
+updateStateValues :: CarRental -> Seq Double -> StateT CarRental IO (Seq Double)
+updateStateValues carRental oldStateValues = do
+  -- it is ok to use the same one
+  rents <- liftIO $ mapM sample (_rentPoissonR carRental)
+  returns <- liftIO $ mapM sample (_returnPoissonR carRental)
+  let acts = _actions carRental
+      bStochastic = or $ fmap ( < 0) acts
+  caclActionValue carRental oldStateValues (_states
+  -- 1. calc return: rent income - transfer cost
+    
+
+caclOneActionValue :: CarRental -> Seq Double -> [Int] -> [[Int]] -> [Int] -> [Int] -> Double
+caclOneActionValue carRental oldStateValues s rents returns move =
+  let locationOut = map sum move
+      locationIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) move
+      transferFees = sum $ zipWith (*) (_transferCost carRental) (map fromIntegral locationOut)
+      sNight = zipWith (-) s (zipWith (-) locationOut locationIn)
+      rents' = zipWith (\ x y -> x < y ? (x, y)) sNight rents
+      rentFees = sum $ zipWith (*) (_rentalCredit carRental) (map fromIntegral rents')
+      sAfterRent = zipWith (-) s rents'
+      sAfterReturn = zipWith (+) sAfterRent returns
+      sFinal = zipWith (\ x y -> x <= y ? (x, y)) sAfterReturn (_maxCars carRental)
+      finalStateIndex = fromJust . Seq elemIndexL sFinal $ _states carRental
+  in  (rentFees - transferFees) + (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)      
+
+--     _locationNum :: Int
+--    ,_theta :: Double
+--    ,_discount :: Double
+--    ,_maxCars :: [Int]
+--    ,_rentalCredit :: [Double]
+--    ,_transferCost :: [Double]
+--    ,_maxTransferCars :: [Int]
+--    ,_freeParkingLimit :: [Int]
+--    ,_additionalParkingCost :: [Double]
+--    ,_additionalTransferSaving :: [Double]
+--    -- input randoms
+--    ,_rentPoissonR :: [RVar Int]
+--    ,_returnPoissonR :: [RVar Int]
+--    -- state & action: using the same index
+--    ,_states :: Seq [Int]
+--    ,_greedyAction :: Seq Int
+--    ,_possibleActions :: Seq (Seq [[Int]]) -- transfer out for each location
+--    ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
+
+  
+  sum $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
+                    in  0.25 * (r + (_discount w) * (valueOfState values s' size))
+            ) actions
+
+  pure oldStateValues
+
+policyImprovement :: CarRental -> StateT CarRental IO (Bool, Int)
+policyImprovement carRental = do
+  let oldActions = _actions carRental
+      percent = 100
+  put carRental
+  if percent >= 100
+     then pure (True, 100)
+     else pure (False, 0)
+    
+-- new state value = return + discount * dstStateValue
+-- for every state we cal it's action return
+-- percent) fromRational $ (length . filter (0 ==) $ (zipWith (-) (_actions carRental) oldActions) )
+--calcActionReturn 
+-- 
+
 --------------------------------------------------------------------------------
