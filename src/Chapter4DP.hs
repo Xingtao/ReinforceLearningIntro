@@ -51,7 +51,7 @@ data CarRental = CarRental {
     -- state & action: using the same index
     ,_states :: Seq [Int]
     ,_greedyAction :: Seq Int
-    ,_possibleActions :: Seq [[Int]] -- transfer out
+    ,_possibleActions :: Seq (Seq [[Int]]) -- transfer out for each location
     ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
     }
 
@@ -61,17 +61,17 @@ mkCarRental :: Int -> Double -> [Int] -> [Double] -> [Double] ->
                       [Int] -> [Double] -> [Double] -> [RVar Int] -> [RVar Int] -> CarRental
 mkCarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR =
   CarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR
-            (Seq.fromList allStates) initActions (Seq.fromList possibleActions) stateVals
+            (Seq.fromList allStates) initActions (Seq.fromList $ map Seq.fromList possibleActions) stateVals
   where
   allStates = generateStates maxCarNums
   initActions = Seq.fromList . take (n*max) $ repeat 0
   stateVals = Seq.fromList . take (n*max) $ repeat 0.0
-  possibleActions = filterPossibles allStates maxCarNums $ generateMoves maxTrans
+  possibleActions = filterPossibilities allStates maxCarNums $ generateMoves maxTrans
 
 -- generate all states for multiple locations
 generateStates :: [Int] -> [[Int]]
 generateStates [] = [[]]
-generateStates (x:xs) = [(y:ys) | y <- [0..x], ys <- generateKey xs]
+generateStates (x:xs) = [(y:ys) | y <- [0..x], ys <- generateStates xs]
 
 -- generate one location's tansfer out possibilities
 generateOneMove :: Int -> Int -> [[Int]]
@@ -87,16 +87,16 @@ generateMoves trans = go moves
   moves = map (generateOneMove (length trans)) trans
 
 -- filter impossible transfer moves
-filterPossibles :: [[Int]] -> [Int] -> [[[Int]]] -> [[[Int]]]
-filterPossibles [] _ _ = []
-filterPossibles (s:ss) maxCarNums possibleMoves =
-  filter (go maxCarNums s move) possibleMoves : filterPossibles xs maxCarNums possibleMoves
+filterPossibilities :: [[Int]] -> [Int] -> [[[Int]]] -> [[[[Int]]]]
+filterPossibilities [] _ _ = []
+filterPossibilities (s:ss) maxCarNums possibleMoves =
+  filter (go maxCarNums s) possibleMoves : filterPossibilities ss maxCarNums possibleMoves
   where
-  go :: [Int] -> [Int] -> [[Int]] -> Bool
+  go :: [Int] -> [Int] -> [[Int]] ->Bool
   go maxCarNums s move =
     let moveLocationNums = foldl (zipWith (+)) (take (length s) $ repeat 0) move
         c1 = and $ zipWith3 (\ x y z -> x + y <= z) s moveLocationNums maxCarNums
-        c2 = zipWith3 (\ index curNum m -> m!!index == 0 && sum m <= curNum) [0..] s move
+        c2 = and $ zipWith3 (\ index curNum m -> (m!!index == 0) && (sum m <= curNum)) [0..] s move
     in  c1 && c2
 
 --------------------------------------------------------------------------------
