@@ -2,10 +2,13 @@
 {-# LANGUAGE ScopedTypeVariables         #-}
 {-# LANGUAGE MultiParamTypeClasses       #-}
 {-# LANGUAGE TypeOperators               #-}
+{-# LANGUAGE TypeSynonymInstances        #-}
+{-# LANGUAGE FlexibleInstances           #-}
 
-module Chapter4Bandit
-    (
-    , loopSteps
+module Chapter4DP
+    ( CarRental(..)
+    , mkCarRental
+    , step
     ) where
 
 import           Control.Monad
@@ -14,6 +17,7 @@ import           Control.Monad.Trans.State
 
 import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import           Data.List(take, repeat)
+import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import qualified Data.Map as M
 
@@ -29,19 +33,23 @@ import qualified Numeric.LinearAlgebra as LA
 import           Utils
 
 ------------------------------------------------------------------------------------------
--- | Dynamic Programming Experiments: Car Rental & Gamblers Problem
---   States: Number of cars in each location, represent
---   Actions: Number of cars Transferred between locations
---   Returns: rental credit, transfer cost, parking cost, additional saveings
+-- | Dynamic Programming Experiments: Car Rental
+--   States: number of cars in each location, represents as: Seq [Int] 
+--   Actions: number of cars Transferred between locations, represents as: Seq (Seq [[Int]])
+--   Returns: rental credit, transfer cost, parking cost, additional saveings, represents as: double
 
 ------------------------------------------------------------------------------------------
+instance Show (RVar Int) where
+  show _ = "poisson random variables"
+
 data CarRental = CarRental {
      _locationNum :: Int
+    ,_theta :: Double
     ,_discount :: Double
     ,_maxCars :: [Int]
     ,_rentalCredit :: [Double]
     ,_transferCost :: [Double]
-    ,_maxTransferCars :: [Double]
+    ,_maxTransferCars :: [Int]
     ,_freeParkingLimit :: [Int]
     ,_additionalParkingCost :: [Double]
     ,_additionalTransferSaving :: [Double]
@@ -53,19 +61,19 @@ data CarRental = CarRental {
     ,_greedyAction :: Seq Int
     ,_possibleActions :: Seq (Seq [[Int]]) -- transfer out for each location
     ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
-    }
+    } deriving (Show)
 
 makeLenses ''CarRental
 
-mkCarRental :: Int -> Double -> [Int] -> [Double] -> [Double] ->
+mkCarRental :: Int -> Double -> Double -> [Int] -> [Double] -> [Double] -> [Int] ->
                       [Int] -> [Double] -> [Double] -> [RVar Int] -> [RVar Int] -> CarRental
-mkCarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR =
-  CarRental nLocations gamma maxCarNums earns maxTrans freeLimit parkFee savings rentR returnR
+mkCarRental nLocations theTheta gamma maxCarNums earns transCost maxTrans freeLimit parkFee savings rentR returnR =
+  CarRental nLocations theTheta gamma maxCarNums earns transCost maxTrans freeLimit parkFee savings rentR returnR
             (Seq.fromList allStates) initActions (Seq.fromList $ map Seq.fromList possibleActions) stateVals
   where
   allStates = generateStates maxCarNums
-  initActions = Seq.fromList . take (n*max) $ repeat 0
-  stateVals = Seq.fromList . take (n*max) $ repeat 0.0
+  initActions = Seq.fromList . take (sum $ map (nLocations*) maxCarNums) $ repeat 0
+  stateVals = Seq.fromList . take (sum $ map (nLocations*) maxCarNums) $ repeat 0.0
   possibleActions = filterPossibilities allStates maxCarNums $ generateMoves maxTrans
 
 -- generate all states for multiple locations
@@ -100,71 +108,18 @@ filterPossibilities (s:ss) maxCarNums possibleMoves =
     in  c1 && c2
 
 --------------------------------------------------------------------------------
----- learning: Policy Iteration: In Place Update
+---- learning: Policy Iteration (In Place Update). Page-65
 
-loopSteps :: Int -> StateT CarRental IO [Double]
-loopSteps times = replicateM times step
+step :: StateT CarRental IO (Bool, Int)
+step = policyEvaluation >> policyImprovement
 
-step :: StateT CarRental IO Double
-step = selectOneAction >>= takeOneAction
+policyEvaluation :: StateT CarRental IO Bool
+policyEvaluation = do
+  carRental <- get
+  pure True
 
-selectOneAction :: StateT CarRental IO Int
-selectOneAction = do
-  bandit <- get
-  actionN <- case _policy bandit of
-    EGreedy epsilonRVar -> do
-      bExplore <- liftIO $ sample epsilonRVar
-      if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
-         else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
-    UCB c -> do
-      let !ucbEstValues = zipWith (calcUCB (_curStep bandit)) (_nActions bandit) (_qValues bandit)
-      pure $ fst $ argmaxWithIndex (zip [0..] ucbEstValues)
-    Gradient _ -> do
-      let gradientValues = map exp (_qValues bandit)
-          gradientProbs = map ( / sum gradientValues) gradientValues
-          -- sampling according to distribution (element probability)
-          -- the following line will produce a very good result, even 0.4 without baseline. why?
-          -- is it because we do weighted random extract twice ?
-          weightedRVar = weightedShuffle $ zip gradientProbs [0..]
-      liftIO $ head <$> sample weightedRVar
-      -- pure $ fst $ argmaxWithIndex (zip [0..] gradientProbs)
-  pure actionN
-  where
-  calcUCB :: Int -> Int -> Double -> Double
-  calcUCB total n val = val + sqrt ((log $ fromIntegral total) / fromIntegral n)
-
-takeOneAction :: Int -> StateT CarRental IO Double
-takeOneAction actionN = do
-  bandit <- get
-  reward <- liftIO $ sample (_srcRVars bandit !! actionN)
-  let bestTake = (_bestValueIdx bandit == actionN) ? (1.0, 0.0)
-      bandit' = bandit & (nActions . element actionN +~ 1)
-                       & (totalReward +~ reward)
-                       & (curStep +~ 1)
-                       & (bestTakes %~ (++ [bestTake]))
-      bandit'' = stateUpdate bandit' actionN reward
-  put bandit''
-  pure reward
-  where
-  stateUpdate :: CarRental -> Int -> Double -> CarRental
-  stateUpdate bandit actionN reward =
-    let actionTakes = (_nActions bandit) !! actionN
-        ss = (_stepSize bandit < 0) ? (1.0 / fromIntegral actionTakes, _stepSize bandit)
-        oldEstValue = (_qValues bandit) !! actionN
-    in  case _policy bandit of
-          Gradient bBaseline ->
-            let baseline = bBaseline ? (_totalReward bandit / (fromIntegral $ _curStep bandit), 0.0)
-                gradientValues = map exp (_qValues bandit)
-                gradientProbs = map ( / sum gradientValues) gradientValues
-                newEstValues = zipWith3 (updateGradientPreference reward baseline ss)
-                                        (_qValues bandit) gradientProbs [0..]
-            in  bandit & (qValues .~ newEstValues)
-          -- epsilone greedy & ucb use the same updating formular
-          _ -> let newEstValue = oldEstValue + (reward - oldEstValue) * ss
-               in  bandit & (qValues . element actionN .~ newEstValue)
-
-  updateGradientPreference :: Double -> Double -> Double -> Double -> Double -> Int -> Double
-  updateGradientPreference reward baseline ss oldVal prob actionIdx =
-    (actionN == actionIdx) ? (oldVal + ss * (reward - baseline) * (1 - prob),
-                              oldVal - ss * (reward - baseline) * prob)
+policyImprovement :: StateT CarRental IO (Bool, Int)
+policyImprovement = do
+  carRental <- get
+  pure (True, 100)
 --------------------------------------------------------------------------------

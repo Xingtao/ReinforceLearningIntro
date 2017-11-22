@@ -15,6 +15,11 @@ import           Control.Monad.Trans.State
 import           Data.Configurator
 import           Data.Configurator.Types                  
 import           Data.Text (Text)
+
+import           Data.Random
+import           Data.Random.Distribution
+import           Data.Random.Distribution.Poisson
+
 import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 import           System.Console.AsciiProgress(Options(..), Stats(..),
@@ -26,54 +31,52 @@ import           Chapter4DP
 
 testChapter4 :: FilePath -> IO ()
 testChapter4 configPath = do
-  print "Chapter 3 Experiment Starting "
+  print "Chapter 4 Experiment Starting "
   (config, _) <- autoReload autoConfig [Required configPath]
   (bCarRental :: Bool) <- require config "enable.bCarRental"
   when bCarRental (doCarRentalTest config)
  
 doCarRentalTest :: Config -> IO () 
 doCarRentalTest config = do
-  (discount::Double) <- require config "carRental.discount"
-  (maxCars::[Int]) <- require config "carRental.policy"
+  (theTheta::Double) <- require config "carRental.theta"
+  (discountGamma::Double) <- require config "carRental.discount"
+  (maxCars::[Int]) <- require config "carRental.maxCars"
   (rentalCredit::[Double]) <- require config "carRental.rentalCredit"
-  (transferCost::[Double]) <- require config "carRental.rentalCredit"
+  (transCost::[Double]) <- require config "carRental.transferCost"
   (maxTransferCars::[Int]) <- require config "carRental.maxTransferCars"
-  (rentalCars::[Int]) <- require config "carRental.rentalCars"
-  (returnCars::[Int]) <- require config "carRental.returnCars"
   (freeParkingLimit::[Int]) <- require config "carRental.freeParkingLimit"
   (additionalParkingCost::[Double]) <- require config "carRental.additionalParkingCost"
   (additionalTransferSaving::[Double]) <- require config "carRental.additionalTransferSaving"
+  (rentalCars::[Double]) <- require config "carRental.rentalCars"
+  (returnCars::[Double]) <- require config "carRental.returnCars"
 
-  let specials = zipWith3 (\ src dst r -> ((src!!0, src!!1), (dst!!0, dst!!1), r))
-                                          specialPositions specialTransitPos specialRewards
+  let rentCarR = map poisson rentalCars
+      returnCarR = map poisson returnCars
+      carRental = mkCarRental (length maxCars) theTheta discountGamma maxCars rentalCredit transCost
+                              maxTransferCars freeParkingLimit additionalParkingCost
+                              additionalTransferSaving rentCarR returnCarR
+    
   -- do experiments
-  mapM_ (goOnePolicyTest size discountGamma learningAccuracy specials) policies
+  goLoop carRental   
   where
-  goOnePolicyTest size discountGamma learningAccuracy specials aPolicy = displayConsoleRegions $ do
-    print ("Will do experiment with policy " ++ aPolicy)
-    putStrLn ("Special positions: " ++ show specials)
-    let thePolicy = read aPolicy
-        world = createWorld size thePolicy discountGamma specials
+  goLoop carRental = displayConsoleRegions $ do
+    print ("Will do car rental experiment " ++ (show carRental))
     pg <- newProgressBar def { pgWidth = 80
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
                              }
-    loop pg world 1
-    print "finish chapter4 experiments"
+    loop pg carRental
+    putStrLn $ show carRental
+    putStrLn "car rental experiment finish"
     where
-    loop pg world count = do
-      let (diff, w') = runState step world
-      when (count `mod` 10 == 0)
-           (do
-            print ("Iteration " ++ show count)
-            putStr $ showStateValues (_maxSize w') (_stateValues w')
-           )
-      case diff < learningAccuracy of
+    loop pg carRental = do
+      ((bFinish, percent), carRental') <- runStateT step carRental
+      case bFinish of
          False -> do
            stat <- getProgressStats pg
-           let ticked = stCompleted stat
-               percent = floor (100.0 / (diff / learningAccuracy))
-           when (ticked < percent) (tickN pg (fromInteger $ percent - ticked))
-           loop pg w' (count + 1)
-         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))
+           let ticked = fromInteger $ stCompleted stat
+               willTick = percent - ticked
+           when (willTick > 0) (tickN pg willTick)
+           loop pg carRental'
+         True -> complete pg
       
