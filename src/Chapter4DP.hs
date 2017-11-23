@@ -22,9 +22,6 @@ import           Data.Maybe
 
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Data.Random
-import           Data.Random.Distribution
-import           Data.Random.Distribution.Poisson
 import           Language.Haskell.TH
 
 -- project
@@ -53,22 +50,24 @@ data CarRental = CarRental {
     ,_additionalParkingCost :: [Double]
     ,_additionalTransferSaving :: [Double]
     -- input randoms
-    ,_rentPoissonR :: [RVar Int]
-    ,_returnPoissonR :: [RVar Int]
+    ,_rentLambda :: [Int]
+    ,_returnLambda :: [Int]
     -- state & action: using the same index
     ,_states :: Seq [Int]
     -- if < 0, using stochastic policy (try every action equprob) as initial policy
     ,_actions :: Seq Int
     ,_possibleActions :: Seq (Seq [[Int]]) -- transfer out for each location
     ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
+    ,_rentPoissonR :: Seq [(Int, Double)]
+    ,_returnPoissonR :: Seq [(Int, Double)]
     } deriving (Show)
 
 makeLenses ''CarRental
 
 mkCarRental :: Int -> Double -> Double -> [Int] -> [Double] -> [Double] -> [Int] ->
-                      [Int] -> [Double] -> [Double] -> [RVar Int] -> [RVar Int] -> CarRental
-mkCarRental nLocations theTheta gamma maxCarNums earns transCost maxTrans freeLimit parkFee savings rentR returnR =
-  CarRental nLocations theTheta gamma maxCarNums earns transCost maxTrans freeLimit parkFee savings rentR returnR
+                      [Int] -> [Double] -> [Double] -> [Int] -> [Int] -> CarRental
+mkCarRental nLocations theTheta gamma maxCarNums earns transCost maxTrans freeLimit parkFee savings rent return =
+  CarRental nLocations theTheta gamma maxCarNums earns transCost maxTrans freeLimit parkFee savings rent return
             (Seq.fromList allStates) initActions (Seq.fromList $ map Seq.fromList possibleActions) stateVals
   where
   allStates = generateStates maxCarNums
@@ -113,11 +112,11 @@ filterPossibilities (s:ss) maxCarNums possibleMoves =
 -- | learning: Policy Iteration Page-65 (Not In Place Update)
 --             Initially use stochastic policy, then use greedy
 
-step :: StateT CarRental IO (Bool, Int)
+step :: State CarRental (Bool, Int)
 step = get >>= policyEvaluation >>= put >> get >>= policyImprovement
 
 -- TODO: not take parking, saving into account
-policyEvaluation :: CarRental -> StateT CarRental IO CarRental
+policyEvaluation :: CarRental -> State CarRental CarRental
 policyEvaluation carRental = do
   let oldStateVals = _stateValues carRental
   newStateVals <- updateStateValues carRental oldStateVals
@@ -127,11 +126,9 @@ policyEvaluation carRental = do
      then pure carRental'
      else policyEvaluation carRental'
 
-updateStateValues :: CarRental -> Seq Double -> StateT CarRental IO (Seq Double)
+updateStateValues :: CarRental -> Seq Double -> State CarRental (Seq Double)
 updateStateValues carRental oldStateValues = do
   -- it is ok to use the same one
-  rents <- liftIO $ mapM sample (_rentPoissonR carRental)
-  returns <- liftIO $ mapM sample (_returnPoissonR carRental)
   let acts = _actions carRental
   case or $ fmap ( < 0) acts of
     True -> pure (Seq.zipWith3 (\ idx s as ->
@@ -148,7 +145,7 @@ updateStateValues carRental oldStateValues = do
                                 acts (_states carRental) (_possibleActions carRental))
 
 -- state action pair (s, a) 
-caclOneActionValue :: CarRental -> Int -> [Int] -> [Int] -> [Int] -> [[Int]] -> Double
+caclOneActionValue :: CarRental -> Int -> [(Int, Double)] -> [(Int, Double)] -> [Int] -> [[Int]] -> Double
 caclOneActionValue carRental idx rents returns s a =
   let oldStateValues = _stateValues carRental
       locationsOut = map sum a
@@ -170,12 +167,10 @@ caclOneActionValue carRental idx rents returns s a =
 
 -----------------------------------------------------------------------------------------
 ---- policy improvement, update policy
-policyImprovement :: CarRental -> StateT CarRental IO (Bool, Int)
+policyImprovement :: CarRental -> State CarRental (Bool, Int)
 policyImprovement carRental = do
   let oldActions = _actions carRental
-  rents <- liftIO $ mapM sample (_rentPoissonR carRental)
-  returns <- liftIO $ mapM sample (_returnPoissonR carRental)
-  let actionReturns =
+      actionReturns =
         Seq.zipWith3 (\ idx s as -> fmap (caclOneActionValue carRental idx rents returns s) as)
                      (Seq.fromList [0..(length $ _states carRental) - 1])
                      (_states carRental) (_possibleActions carRental)

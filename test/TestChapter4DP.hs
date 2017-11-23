@@ -68,7 +68,7 @@ doCarRentalTest config = do
     putStrLn "car rental experiment finish"
     where
     loop pg carRental = do
-      ((bFinish, percent), carRental') <- runStateT step carRental
+      ((bFinish, percent), carRental') <- runState step carRental
       case bFinish of
          False -> do
            stat <- getProgressStats pg
