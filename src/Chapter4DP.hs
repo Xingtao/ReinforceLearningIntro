@@ -128,8 +128,8 @@ policyEvaluation carRental = do
 updateStateValues :: CarRental -> Seq Double -> StateT CarRental IO (Seq Double)
 updateStateValues carRental oldStateValues = do
   -- it is ok to use the same one
-  rents <- liftIO $ mapM sample (_rentPoissonR carRental)
-  returns <- liftIO $ mapM sample (_returnPoissonR carRental)
+  rents <- liftIO $ pure $ repeat 2 --mapM sample (_rentPoissonR carRental)
+  returns <- liftIO $ pure $ repeat 2 --mapM sample (_returnPoissonR carRental)
   let acts = _actions carRental
   case or $ fmap ( < 0) acts of
     True -> pure (Seq.zipWith (\ s as ->
