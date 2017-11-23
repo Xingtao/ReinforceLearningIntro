@@ -84,7 +84,7 @@ generateStates (x:xs) = [(y:ys) | y <- [0..x], ys <- generateStates xs]
 -- generate one location's tansfer out possibilities
 generateOneMove :: Int -> Int -> [[Int]]
 generateOneMove 0   n = [[]]
-generateOneMove len n = [(x:xs) | x <- [0..n-1], xs <- generateOneMove (len - 1) n, sum (x:xs) <= n]
+generateOneMove len n = [(x:xs) | x <- [0..n], xs <- generateOneMove (len - 1) n, sum (x:xs) <= n]
 
 -- combine all possible transfer moves
 generateMoves :: [Int] -> [[[Int]]]
@@ -106,6 +106,8 @@ filterPossibilities (s:ss) maxCarNums possibleMoves =
         c1 = and $ zipWith3 (\ x y z -> x + y <= z) s moveLocationNums maxCarNums
         c2 = and $ zipWith3 (\ index curNum m -> (m!!index == 0) && (sum m <= curNum)) [0..] s move
     in  c1 && c2
+
+-- showSAPair
 
 --------------------------------------------------------------------------------
 -- | learning: Policy Iteration Page-65 (Not In Place Update)
@@ -175,9 +177,9 @@ policyImprovement carRental = do
       percent = round (  ((100.0 *) . fromIntegral . length $ filter (==0) diffs)
                        / (fromIntegral $ length newActions))
       carRental' = carRental & (actions .~ newActions)
-  put carRental
+  put carRental'
   if percent >= 100
      then pure (True, 100)
-     else pure (False, 0)
+     else pure (False, percent)
 
 --------------------------------------------------------------------------------

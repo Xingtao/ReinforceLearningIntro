@@ -64,8 +64,7 @@ doCarRentalTest config = do
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
                              }
-    loop pg carRental
-    putStrLn $ show carRental
+    carRental' <- loop pg carRental    
     putStrLn "car rental experiment finish"
     where
     loop pg carRental = do
@@ -76,6 +75,6 @@ doCarRentalTest config = do
            let ticked = fromInteger $ stCompleted stat
                willTick = percent - ticked
            if (willTick > 0) then(tickN pg willTick)
-              else print "Finish One Improvement" 
+              else print ("Finish One Improvement " ++ show percent) 
            loop pg carRental'
-         True -> complete pg      
+         True -> complete pg >> pure carRental'
