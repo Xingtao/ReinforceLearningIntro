@@ -25,10 +25,10 @@ import qualified Data.Sequence as Seq
 import           Data.Random
 import           Data.Random.Distribution
 import           Data.Random.Distribution.Poisson
-
 import           Language.Haskell.TH
 
 -- project
+import           Debug.Trace
 import           Utils
 
 ------------------------------------------------------------------------------------------
@@ -145,18 +145,20 @@ updateStateValues carRental oldStateValues = do
 
 -- state action pair (s, a) 
 caclOneActionValue :: CarRental -> [Int] -> [Int] -> [Int] -> [[Int]] -> Double
-caclOneActionValue carRental rents returns s a = 
+caclOneActionValue carRental rents returns s a =
   let oldStateValues = _stateValues carRental
-      locationOut = map sum a
-      locationIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) a
-      transferFees = sum $ zipWith (*) (_transferCost carRental) (map fromIntegral locationOut)
-      sNight = zipWith (-) s (zipWith (-) locationOut locationIn)
-      rents' = zipWith (\ x y -> (x < y) ? (x, y)) sNight rents
+      locationsOut = map sum a
+      locationsIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) a
+      transferFees = sum $ zipWith (*) (_transferCost carRental) (map fromIntegral locationsOut)
+      sNight = zipWith (+) locationsIn (zipWith (-) s locationsOut)
+      sNight' = minElement sNight (_maxCars carRental)
+      -- the second day
+      rents' = minElement sNight' rents
       rentFees = sum $ zipWith (*) (_rentalCredit carRental) (map fromIntegral rents')
-      sAfterRent = zipWith (-) s rents'
+      sAfterRent = zipWith (-) sNight' rents'
       sAfterReturn = zipWith (+) sAfterRent returns
-      sFinal = zipWith (\ x y -> (x <= y) ? (x, y)) sAfterReturn (_maxCars carRental)
-      finalStateIndex = fromJust . Seq.elemIndexL sFinal $ _states carRental
+      sFinal = minElement sAfterReturn (_maxCars carRental)
+      !finalStateIndex = fromJust (Seq.elemIndexL sFinal $ _states carRental)
   in  (rentFees - transferFees) + (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
 
 -----------------------------------------------------------------------------------------

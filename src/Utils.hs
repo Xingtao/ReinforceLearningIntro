@@ -30,6 +30,13 @@ argmaxWithIndex = maximumBy (comparing snd)
 (?) :: Bool -> (a, a) -> a
 (?) bTrue (x, y) = if bTrue then x else y
 
+-- | Get max element by index of two list
+maxElement :: (Ord a) => [a] -> [a] -> [a]
+maxElement = zipWith (\ x y -> (x > y) ? (x, y))
+
+minElement :: (Ord a) => [a] -> [a] -> [a]
+minElement = zipWith (\ x y -> (x <= y) ? (x, y))
+
 {-
 import System.Random
 -- 'Psuedo' Random Distributions

@@ -59,7 +59,7 @@ doCarRentalTest config = do
   goLoop carRental   
   where
   goLoop carRental = displayConsoleRegions $ do
-    putStrLn ("Will do car rental experiment " >> putStrLn $ show carRental
+    putStrLn "Will do car rental experiment " >> putStrLn (show carRental)
     pg <- newProgressBar def { pgWidth = 80
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
@@ -75,6 +75,7 @@ doCarRentalTest config = do
            stat <- getProgressStats pg
            let ticked = fromInteger $ stCompleted stat
                willTick = percent - ticked
-           when (willTick > 0) (tickN pg willTick)
+           if (willTick > 0) then(tickN pg willTick)
+              else print "Finish One Improvement" 
            loop pg carRental'
          True -> complete pg      
