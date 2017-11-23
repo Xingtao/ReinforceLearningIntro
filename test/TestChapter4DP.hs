@@ -54,13 +54,12 @@ doCarRentalTest config = do
       returnCarR = map poisson returnCars
       carRental = mkCarRental (length maxCars) theTheta discountGamma maxCars rentalCredit transCost
                               maxTransferCars freeParkingLimit additionalParkingCost
-                              additionalTransferSaving rentCarR returnCarR
-    
+                              additionalTransferSaving rentCarR returnCarR    
   -- do experiments
   goLoop carRental   
   where
   goLoop carRental = displayConsoleRegions $ do
-    print ("Will do car rental experiment " ++ (show carRental))
+    putStrLn ("Will do car rental experiment " >> putStrLn $ show carRental
     pg <- newProgressBar def { pgWidth = 80
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
@@ -78,5 +77,4 @@ doCarRentalTest config = do
                willTick = percent - ticked
            when (willTick > 0) (tickN pg willTick)
            loop pg carRental'
-         True -> complete pg
-      
+         True -> complete pg      

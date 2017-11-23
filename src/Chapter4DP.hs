@@ -17,10 +17,11 @@ import           Control.Monad.Trans.State
 
 import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
 import           Data.List(take, repeat)
+import           Data.Foldable (toList)
+import           Data.Maybe
+
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Data.Foldable (toList)
-
 import           Data.Random
 import           Data.Random.Distribution
 import           Data.Random.Distribution.Poisson
@@ -116,12 +117,11 @@ step = get >>= policyEvaluation >>= put >> get >>= policyImprovement
 -- TODO: not take parking, saving into account
 policyEvaluation :: CarRental -> StateT CarRental IO CarRental
 policyEvaluation carRental = do
-  let oldStateValues = _stateValues carRental
-  newStateValues <- updateStateValues carRental oldStateValues
-  let carRental' = carRental & (stateValues .~ newStateValues)
-      convergeDiff = argmax (Seq.zipWith ((abs .) . (-))
-                                         newStateValues oldStateValues)
-  if convergeDiff < (_theta carRental)
+  let oldStateVals = _stateValues carRental
+  newStateVals <- updateStateValues carRental oldStateVals
+  let carRental' = carRental & (stateValues .~ newStateVals)
+      maxDiff = argmax $ toList (Seq.zipWith (\ x y -> abs (x-y)) newStateVals oldStateVals)
+  if maxDiff < (_theta carRental)
      then pure carRental'
      else policyEvaluation carRental'
 
@@ -131,51 +131,51 @@ updateStateValues carRental oldStateValues = do
   rents <- liftIO $ mapM sample (_rentPoissonR carRental)
   returns <- liftIO $ mapM sample (_returnPoissonR carRental)
   let acts = _actions carRental
-      bStochastic = or $ fmap ( < 0) acts
-  if bStochastic
-     then do
-       let fmap (\ moves -> (foldl (+) 0.0 (fmap (caclActionValue carRentalrents returns) moves))
-                            / (fromIntegral $ length moves))
-                (_possibleActions carRental)
-     else pure . Seq.fromList (Seq.zipWith (\ actN moves - > caclActionValue carRental (_states carRental)
-                                                                 rents returns (Seq.index moves actN))
-                                           acts (_possibleActions carRental))
+  case or $ fmap ( < 0) acts of
+    True -> pure (Seq.zipWith (\ s as ->
+                                 (foldl (+) 0.0
+                                    (fmap (caclOneActionValue carRental rents returns s) as))
+                                 / (fromIntegral $ length as)
+                              )
+                              (_states carRental) (_possibleActions carRental))
+    False -> pure (Seq.zipWith3 (\ actN s as -> caclOneActionValue carRental
+                                                    rents returns s (Seq.index as actN)
+                                )
+                                acts (_states carRental) (_possibleActions carRental))
 
+-- state action pair (s, a) 
 caclOneActionValue :: CarRental -> [Int] -> [Int] -> [Int] -> [[Int]] -> Double
-caclOneActionValue carRental s rents returns move =
+caclOneActionValue carRental rents returns s a = 
   let oldStateValues = _stateValues carRental
-      locationOut = map sum move
-      locationIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) move
+      locationOut = map sum a
+      locationIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) a
       transferFees = sum $ zipWith (*) (_transferCost carRental) (map fromIntegral locationOut)
       sNight = zipWith (-) s (zipWith (-) locationOut locationIn)
-      rents' = zipWith (\ x y -> x < y ? (x, y)) sNight rents
+      rents' = zipWith (\ x y -> (x < y) ? (x, y)) sNight rents
       rentFees = sum $ zipWith (*) (_rentalCredit carRental) (map fromIntegral rents')
       sAfterRent = zipWith (-) s rents'
       sAfterReturn = zipWith (+) sAfterRent returns
-      sFinal = zipWith (\ x y -> x <= y ? (x, y)) sAfterReturn (_maxCars carRental)
-      finalStateIndex = fromJust . Seq elemIndexL sFinal $ _states carRental
+      sFinal = zipWith (\ x y -> (x <= y) ? (x, y)) sAfterReturn (_maxCars carRental)
+      finalStateIndex = fromJust . Seq.elemIndexL sFinal $ _states carRental
   in  (rentFees - transferFees) + (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
 
 -----------------------------------------------------------------------------------------
 ---- policy improvement, update policy
 policyImprovement :: CarRental -> StateT CarRental IO (Bool, Int)
 policyImprovement carRental = do
-  let oldActions = toList $ _actions carRental
+  let oldActions = _actions carRental
   rents <- liftIO $ mapM sample (_rentPoissonR carRental)
   returns <- liftIO $ mapM sample (_returnPoissonR carRental)
-  let actionsReturns = fmap (fmap (caclActionValue carRental rents returns)) (_possibleActions carRental)
-
-
-      percent = 100
+  let actionReturns = Seq.zipWith (\ s as -> fmap (caclOneActionValue carRental rents returns s) as)
+                                  (_states carRental) (_possibleActions carRental) :: Seq (Seq Double)
+      newActions = fmap (fst . argmaxWithIndex . zip [0..] . toList) actionReturns
+      diffs = toList $ Seq.zipWith (-) oldActions newActions
+      percent = round (  ((100.0 *) . fromIntegral . length $ filter (==0) diffs)
+                       / (fromIntegral $ length newActions))
+      carRental' = carRental & (actions .~ newActions)
   put carRental
   if percent >= 100
      then pure (True, 100)
      else pure (False, 0)
-
--- new state value = return + discount * dstStateValue
--- for every state we cal it's action return
--- percent) fromRational $ (length . filter (0 ==) $ (zipWith (-) (_actions carRental) oldActions) )
---calcActionReturn
---
 
 --------------------------------------------------------------------------------
