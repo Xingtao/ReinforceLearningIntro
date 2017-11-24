@@ -9,6 +9,7 @@ module Chapter4DP
     ( CarRental(..)
     , mkCarRental
     , step
+    , showCarRentalResult
     ) where
 
 import           Control.Monad
@@ -77,20 +78,29 @@ mkCarRental nLocations theTheta gamma maxCarNums earns
   initActions = Seq.fromList . take (length allStates) $ repeat (-1)
   stateVals = Seq.fromList . take (length allStates) $ repeat 0.0
   possibleActions = filterPossibilities allStates maxCarNums $ generateMoves maxTrans
-  prob lambda n = lambda ^ (fromInteger n) / (fromIntegral $ factorial n)  * (exp $ negate lambda)
+  prob lambda n = lambda ^ (fromIntegral n) / (fromIntegral $ factorial n)  * (exp $ negate lambda)
   -- NOTE: ignore poisson probability < 5% (take as 0)
   rentPoissonDist =
     zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.05) .
-                                         map (\ n -> (n, prob lambda n)) $ [0..maxN]) rent maxCarsNums 
+                                map (\ n -> (n, prob lambda n)) $ [0..maxN]) rent maxCarNums 
   returnPoissonDist =
     zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.05) .
-                                         map (\ n -> (n, prob lambda n)) $ [0..maxN]) return maxCarsNums
-  jointRentDist = map (foldl (\ (p', v') (v, p) -> (p'*p, v' ++ [v])) (1.0, [])) (joint rentPoissonDist)
-  jointReturnDist = map (foldl (\ (p', v') (v, p) -> (p'*p, v' ++ [v])) (1.0, [])) (joint returnPoissonDist)
+                                map (\ n -> (n, prob lambda n)) $ [0..maxN]) return maxCarNums
+  jointRentDist = map go (joint rentPoissonDist)
+  jointReturnDist = map go (joint returnPoissonDist)
+  go = foldl (\(p', v') (v, p) -> (p'*p, v' ++ [v])) (1.0, [])
   -- joint distributions over all locations
   joint :: [[(Int, Double)]] -> [[(Int, Double)]]
   joint [] = [[]]
   joint (x:xs) = [(y:ys) | y <- x, ys <- joint xs]
+
+-- | Car Rental Helpers
+showCarRentalResult :: CarRental -> String
+showCarRentalResult carRental =
+  concat . toList $ Seq.zipWith4
+    (\ s actionIdx saPair val ->
+       show s ++ " -> " ++ (show $ Seq.index saPair actionIdx) ++ " -> " ++ show val ++ "\n")
+    (_states carRental) (_actions carRental) (_possibleActions carRental) (_stateValues carRental)
 
 -- generate all states for multiple locations
 generateStates :: [Int] -> [[Int]]
@@ -154,7 +164,8 @@ updateStateValues carRental oldStateValues = do
                                )
                                (Seq.fromList [0..(length $ _states carRental) - 1])
                                (_states carRental) (_possibleActions carRental))
-    False -> pure (Seq.zipWith4 (\ idx actN s as -> caclOneActionValue carRental idx s (Seq.index as actN))
+    False -> pure (Seq.zipWith4 (\ idx actN s as ->
+                                   caclOneActionValue carRental idx s (Seq.index as actN))
                                 (Seq.fromList [0..(length $ _states carRental) - 1])
                                 acts (_states carRental) (_possibleActions carRental))
 

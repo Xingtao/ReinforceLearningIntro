@@ -50,11 +50,9 @@ doCarRentalTest config = do
   (rentalCars::[Double]) <- require config "carRental.rentalCars"
   (returnCars::[Double]) <- require config "carRental.returnCars"
 
-  let rentCarR = map poisson rentalCars
-      returnCarR = map poisson returnCars
-      carRental = mkCarRental (length maxCars) theTheta discountGamma maxCars rentalCredit transCost
+  let carRental = mkCarRental (length maxCars) theTheta discountGamma maxCars rentalCredit transCost
                               maxTransferCars freeParkingLimit additionalParkingCost
-                              additionalTransferSaving rentCarR returnCarR    
+                              additionalTransferSaving rentalCars returnCars    
   -- do experiments
   goLoop carRental   
   where
@@ -64,11 +62,12 @@ doCarRentalTest config = do
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
                              }
-    carRental' <- loop pg carRental    
-    putStrLn "car rental experiment finish"
+    carRental' <- loop pg carRental
+    putStrLn "car rental experiment finish. Final Results: "
+    putStrLn $ showCarRentalResult carRental'
     where
     loop pg carRental = do
-      ((bFinish, percent), carRental') <- runState step carRental
+      let (!(bFinish, percent), !carRental') = runState step carRental
       case bFinish of
          False -> do
            stat <- getProgressStats pg
