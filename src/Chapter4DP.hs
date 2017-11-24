@@ -165,9 +165,7 @@ updateStateValues carRental oldStateValues = do
                                )
                                (Seq.fromList [0..(length $ _states carRental) - 1])
                                (_states carRental) (_possibleActions carRental))
-    False ->
-      let zero = traceShow acts 0
-      in  pure (Seq.zipWith4 (\ idx s as actN ->
+    False -> pure (Seq.zipWith4 (\ idx s as actN ->
                                    caclOneActionValue carRental idx s (Seq.index as actN))
                                 (Seq.fromList [0..(length $ _states carRental) - 1])
                                 (_states carRental) (_possibleActions carRental) acts)
@@ -219,6 +217,7 @@ policyImprovement carRental = do
       diffs = toList $ Seq.zipWith (-) oldActions newActions
       percent = round (  ((100.0 *) . fromIntegral . length $ filter (== 0) diffs)
                        / (fromIntegral $ length newActions))
+      !zero = trace ("=======> percent: " ++ show percent) 0 
       carRental' = carRental & (actions .~ newActions)
   put carRental'
   if percent >= 100
