@@ -149,6 +149,7 @@ policyEvaluation carRental = do
   newStateVals <- updateStateValues carRental oldStateVals
   let !carRental' = carRental & (stateValues .~ newStateVals)
       !maxDiff = argmax $ toList (Seq.zipWith (\ x y -> abs (x-y)) newStateVals oldStateVals)
+      !zero = traceShow newStateVals 0
   if maxDiff < (_theta carRental)
      then pure carRental'
      else policyEvaluation carRental'
@@ -164,21 +165,26 @@ updateStateValues carRental oldStateValues = do
                                )
                                (Seq.fromList [0..(length $ _states carRental) - 1])
                                (_states carRental) (_possibleActions carRental))
-    False -> pure (Seq.zipWith4 (\ idx actN s as ->
+    False ->
+      let zero = traceShow acts 0
+      in  pure (Seq.zipWith4 (\ idx s as actN ->
                                    caclOneActionValue carRental idx s (Seq.index as actN))
                                 (Seq.fromList [0..(length $ _states carRental) - 1])
-                                acts (_states carRental) (_possibleActions carRental))
+                                (_states carRental) (_possibleActions carRental) acts)
 
 -- | state action pair (s, a) value: sum up on all possibilities
 --   sum(s',r)(p (s', r | s, a)*[r + discount v(s')])
 caclOneActionValue :: CarRental -> Int -> [Int] -> [[Int]] -> Double
 caclOneActionValue carRental stateIdx s a =
   let jointRentDist = _jointRentR carRental
-      jointReturnDist = _jointReturnR carRental        
-  in  sum (zipWith (\ (p1, rents) (p2, returns) ->
-                      p1*p2*(calcOneActionTransition carRental stateIdx s a rents returns)
-                   )
-                   jointRentDist jointReturnDist)
+      jointReturnDist = _jointReturnR carRental
+      -- jointAll = [(x, y) | x <- jointRentDist, y <- jointReturnDist]
+  --in  sum (fmap (\ ((p1, rents), (p2, returns)) ->
+  --                  p1*p2*(calcOneActionTransition carRental stateIdx s a rents returns)
+  --              ) jointAll)
+  in  sum (fmap (\ ((p1, rents)) ->
+                    p1*(calcOneActionTransition carRental stateIdx s a rents [3,2])
+                ) jointRentDist)
 
 calcOneActionTransition :: CarRental -> Int -> [Int] -> [[Int]] -> [Int] -> [Int] -> Double
 calcOneActionTransition carRental stateIdx s a rents returns =
@@ -211,7 +217,7 @@ policyImprovement carRental = do
                      (_states carRental) (_possibleActions carRental)
       newActions = fmap (fst . argmaxWithIndex . zip [0..] . toList) actionReturns
       diffs = toList $ Seq.zipWith (-) oldActions newActions
-      percent = round (  ((100.0 *) . fromIntegral . length $ filter (==0) diffs)
+      percent = round (  ((100.0 *) . fromIntegral . length $ filter (== 0) diffs)
                        / (fromIntegral $ length newActions))
       carRental' = carRental & (actions .~ newActions)
   put carRental'
