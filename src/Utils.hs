@@ -37,6 +37,10 @@ maxElement = zipWith (\ x y -> (x > y) ? (x, y))
 minElement :: (Ord a) => [a] -> [a] -> [a]
 minElement = zipWith (\ x y -> (x <= y) ? (x, y))
 
+factorial :: Integral a => a -> a
+factorial n | n <= 0 = 1
+            | otherwise = n * factorial (n-1)
+
 {-
 import System.Random
 -- 'Psuedo' Random Distributions
