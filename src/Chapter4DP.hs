@@ -79,12 +79,12 @@ mkCarRental nLocations theTheta gamma maxCarNums earns
   stateVals = Seq.fromList . take (length allStates) $ repeat 0.0
   possibleActions = filterPossibilities allStates maxCarNums $ generateMoves maxTrans
   prob lambda n = lambda ^ (fromIntegral n) / (fromIntegral $ factorial n)  * (exp $ negate lambda)
-  -- NOTE: ignore poisson probability < 5% (take as 0)
+  -- NOTE: ignore poisson probability < 1% (take as 0)
   rentPoissonDist =
-    zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.05) .
+    zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.001) .
                                 map (\ n -> (n, prob lambda n)) $ [0..maxN]) rent maxCarNums 
   returnPoissonDist =
-    zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.05) .
+    zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.001) .
                                 map (\ n -> (n, prob lambda n)) $ [0..maxN]) return maxCarNums
   jointRentDist = map go (joint rentPoissonDist)
   jointReturnDist = map go (joint returnPoissonDist)
@@ -158,15 +158,15 @@ updateStateValues :: CarRental -> Seq Double -> State CarRental (Seq Double)
 updateStateValues carRental oldStateValues = do
   let acts = _actions carRental
   case or $ fmap ( < 0) acts of
-    True -> pure (Seq.zipWith3 (\ idx s as ->
+    True -> pure (Seq.zipWith3 (\ stateIdx s as ->
                                   (foldl (+) 0.0
-                                     (fmap (caclOneActionValue carRental idx s) as))
+                                     (fmap (caclOneActionValue carRental stateIdx s) as))
                                   / (fromIntegral $ length as)
                                )
                                (Seq.fromList [0..(length $ _states carRental) - 1])
                                (_states carRental) (_possibleActions carRental))
-    False -> pure (Seq.zipWith4 (\ idx s as actN ->
-                                   caclOneActionValue carRental idx s (Seq.index as actN))
+    False -> pure (Seq.zipWith4 (\ stateIdx s as actN ->
+                                   caclOneActionValue carRental stateIdx s (Seq.index as actN))
                                 (Seq.fromList [0..(length $ _states carRental) - 1])
                                 (_states carRental) (_possibleActions carRental) acts)
 
@@ -186,23 +186,21 @@ caclOneActionValue carRental stateIdx s a =
 
 calcOneActionTransition :: CarRental -> Int -> [Int] -> [[Int]] -> [Int] -> [Int] -> Double
 calcOneActionTransition carRental stateIdx s a rents returns =
-  let oldStateValues = _stateValues carRental
-      locationsOut = map sum a
+  let locationsOut = map sum a
       locationsIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) a
       transferFees = sum $ zipWith (*) (_transferCost carRental) (map fromIntegral locationsOut)
       sNight = zipWith (+) locationsIn (zipWith (-) s locationsOut)
       sNight' = minElement sNight (_maxCars carRental)
       -- the second day
       rents' = minElement sNight' rents
-      rentFees = sum $ zipWith (*) (_rentalCredit carRental) (map fromIntegral rents')
+      rentIncomes = sum $ zipWith (*) (_rentalCredit carRental) (map fromIntegral rents')
       sAfterRent = zipWith (-) sNight' rents'
       sAfterReturn = zipWith (+) sAfterRent returns
       sFinal = minElement sAfterReturn (_maxCars carRental)
       !finalStateIndex = fromJust (Seq.elemIndexL sFinal $ _states carRental)
-      origValue = (_stateValues carRental) `Seq.index` stateIdx
-      return = (rentFees - transferFees) +
-               (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
-  in  origValue + 0.1 * (return - origValue)
+      ret = (rentIncomes - transferFees) +
+            (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
+  in  ret
 
 -----------------------------------------------------------------------------------------
 ---- policy improvement, update policy
