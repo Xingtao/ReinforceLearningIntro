@@ -54,7 +54,8 @@ doCarRentalTest config = do
                               maxTransferCars freeParkingLimit additionalParkingCost
                               additionalTransferSaving rentalCars returnCars    
   -- do experiments
-  goLoop carRental   
+  goLoop carRental
+  when (_locationNum carRental == 2) (drawTwoLocationCarRental carRental)
   where
   goLoop carRental = displayConsoleRegions $ do
     putStrLn "Will do car rental experiment " >> putStrLn (show carRental)
@@ -77,3 +78,9 @@ doCarRentalTest config = do
               else print ("Finish One Improvement " ++ show percent) 
            loop pg carRental'
          True -> complete pg >> pure carRental'
+
+drawTwoLocationCarRental :: CarRental -> IO ()
+drawTwoLocationCarRental carRental = pure ()
+
+
+------------------------------------------------------------------

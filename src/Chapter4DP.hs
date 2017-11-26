@@ -177,11 +177,13 @@ caclOneActionValue carRental stateIdx s a =
   let jointRentDist = _jointRentR carRental
       jointReturnDist = _jointReturnR carRental
       -- jointAll = [(x, y) | x <- jointRentDist, y <- jointReturnDist]
+  -- NOTE: Use constant returns to accelerate the computations.
+  --       The results state values are almost the same
   --in  sum (fmap (\ ((p1, rents), (p2, returns)) ->
   --                  p1*p2*(calcOneActionTransition carRental stateIdx s a rents returns)
   --              ) jointAll)
-  in  sum (fmap (\ ((p1, rents)) ->
-                    p1*(calcOneActionTransition carRental stateIdx s a rents [3,2])
+  in  sum (fmap (\ (p1, rents) -> p1 * (calcOneActionTransition carRental stateIdx s a
+                                              rents (map round $ _returnLambda carRental))
                 ) jointRentDist)
 
 calcOneActionTransition :: CarRental -> Int -> [Int] -> [[Int]] -> [Int] -> [Int] -> Double
