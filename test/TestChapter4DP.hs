@@ -122,6 +122,7 @@ drawTwoLocationCarRental carRental experimentName = do
                       % title (experimentName ++ " - State Values")
   -- avoid Matplotlib's bug  
   code figure >> code valueFigure >> onscreen figure >> onscreen valueFigure
+  threadDelay 100000
   -- also output table format
   let moveResult = showAsTable [0..(_maxCars carRental)!!0]
                                [0..(_maxCars carRental)!!1] (map fromIntegral dataZ) False
@@ -147,5 +148,5 @@ showAsTable col row vals bFloat =
   go len vals rowIdx =
     let first = show rowIdx ++ "|"
         rows = take len $ drop (len * rowIdx) vals
-        format = bFloat ? ("%7.2f", "%7d")
+        format = bFloat ? ("%7.2f", "%7.0f")
     in  first ++ (concat $ map (\ x -> (printf format x :: String) ++ "|") rows) ++ "|\n"
