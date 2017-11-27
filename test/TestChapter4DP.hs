@@ -8,23 +8,32 @@ module TestChapter4DP (
        testChapter4
       )where
 
+import           Control.Concurrent 
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.State
 
 import           Data.Configurator
-import           Data.Configurator.Types                  
+import           Data.Configurator.Types
+import           Data.List.Split (chunksOf)
+import           Data.Foldable (toList)
+
+import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import           Data.Text (Text)
 
 import           Data.Random
 import           Data.Random.Distribution
 import           Data.Random.Distribution.Poisson
 
+import           Graphics.Matplotlib hiding (def)
+
 import           Numeric.LinearAlgebra (Vector, Matrix)
 import qualified Numeric.LinearAlgebra as LA
 import           System.Console.AsciiProgress(Options(..), Stats(..),
                                               displayConsoleRegions, complete,
                                               getProgressStats, def, newProgressBar, tickN)
+import           Text.Printf
 -- project
 import           Utils
 import           Chapter4DP
@@ -38,6 +47,7 @@ testChapter4 configPath = do
  
 doCarRentalTest :: Config -> IO () 
 doCarRentalTest config = do
+  (experimentName::String) <- require config "carRental.experiment"
   (theTheta::Double) <- require config "carRental.theta"
   (discountGamma::Double) <- require config "carRental.discount"
   (maxCars::[Int]) <- require config "carRental.maxCars"
@@ -54,8 +64,9 @@ doCarRentalTest config = do
                               maxTransferCars freeParkingLimit additionalParkingCost
                               additionalTransferSaving rentalCars returnCars    
   -- do experiments
-  goLoop carRental
-  when (_locationNum carRental == 2) (drawTwoLocationCarRental carRental)
+  carRental' <- goLoop carRental
+  when (_locationNum carRental == 2) (drawTwoLocationCarRental carRental' experimentName)
+  threadDelay 100000
   where
   goLoop carRental = displayConsoleRegions $ do
     putStrLn "Will do car rental experiment " >> putStrLn (show carRental)
@@ -66,6 +77,7 @@ doCarRentalTest config = do
     carRental' <- loop pg carRental
     putStrLn "car rental experiment finish. Final Results: "
     putStrLn $ showCarRentalResult carRental'
+    pure carRental'
     where
     loop pg carRental = do
       let (!(bFinish, percent), !carRental') = runState step carRental
@@ -79,8 +91,57 @@ doCarRentalTest config = do
            loop pg carRental'
          True -> complete pg >> pure carRental'
 
-drawTwoLocationCarRental :: CarRental -> IO ()
-drawTwoLocationCarRental carRental = pure ()
+drawTwoLocationCarRental :: CarRental -> String -> IO ()
+drawTwoLocationCarRental carRental experimentName = do
+  putStrLn "Draw Two Location Car Rental Result Graph"
+  let dataX = toList $ fmap (\ (f:s:[]) -> s) (_states carRental) 
+      dataY = toList $ fmap (\ (f:s:[]) -> f) (_states carRental)
+      (dataZ::[Int]) = toList (Seq.zipWith (\ i saPair -> calcZ . foldl (zipWith (+)) [0, 0] $ Seq.index saPair i)
+                                           (_actions carRental) (_possibleActions carRental))
+      dataValue = toList $ _stateValues carRental
+      maxZ = maximum dataZ
+      figure = readData ([dataX], [dataY], [dataZ])
+                 % mp # "ax = plot.gca(projection='3d')"
+                 % mp # "ax.scatter(np.array(data[" # 0 # "]), np.array(data[" # 1 # "]), np.array(data[" # 2 # "]))"
+                 % xlabel "#Cars at second location"
+                 % ylabel "#Cars at first location"
+                 % zlabel "#Cars to move (action)"
+                 % xticks [0, 1..(_maxCars carRental !! 1)]
+                 % yticks [0, 1..(_maxCars carRental !! 0)]
+                 % zticks [negate maxZ, (negate $ maxZ - 1)..maxZ]
+                 % title experimentName
+      valueFigure = readData ([dataX], [dataY], [dataValue])
+                      % mp # "ax = plot.gca(projection='3d')"
+                      % mp # "ax.scatter(np.array(data[" # 0 # "]), np.array(data[" # 1 # "]), np.array(data[" # 2 # "]))"
+                      % xlabel "#Cars at second location"
+                      % ylabel "#Cars at first location"
+                      % zlabel "State Values"
+                      % xticks [0, 1..(_maxCars carRental !! 1)]
+                      % yticks [0, 1..(_maxCars carRental !! 0)]
+                      % title (experimentName ++ " - State Values")
+  -- avoid Matplotlib's bug  
+  code figure >> code valueFigure >> onscreen figure >> onscreen valueFigure
+  -- also output table format
+  let moveResult = showAsTable [0..(_maxCars carRental)!!0] [0..(_maxCars carRental)!!1] (map fromIntegral dataZ)
+      stateResult = showAsTable [0..(_maxCars carRental)!!0] [0..(_maxCars carRental)!!1] dataValue
+  putStrLn moveResult
+  putStrLn stateResult
+  where
+  calcZ :: [Int] -> Int
+  calcZ (firstLocation:secondLocation:[]) = 
+            (firstLocation > 0) ? (firstLocation, negate secondLocation)
+  calcZ _ = error "Not correct action move"
 
-
-------------------------------------------------------------------
+-- output in github markdown format
+showAsTable :: [Int] -> [Int] -> [Double] -> String
+showAsTable col row vals =
+  let colLen = length col
+      header = "second \\ First | " ++ (concat $ map ((++ "|") . show) col) ++ "\n"
+      alignHeader = (concat . take (colLen + 1) $ repeat "|:-----:") ++ "|\n"
+      showRows = concat $ map (go colLen vals) row
+  in  header ++ alignHeader ++ showRows
+  where
+  go len vals rowIdx =
+    let first = show rowIdx ++ "|"
+        rows = take len $ drop (len * rowIdx) vals
+    in  first ++ (concat $ map (\ x -> "|" ++ (printf "%7.2f" x :: String)) rows) ++ "|\n"

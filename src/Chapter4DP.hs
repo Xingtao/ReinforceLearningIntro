@@ -200,9 +200,13 @@ calcOneActionTransition carRental stateIdx s a rents returns =
       sAfterReturn = zipWith (+) sAfterRent returns
       sFinal = minElement sAfterReturn (_maxCars carRental)
       !finalStateIndex = fromJust (Seq.elemIndexL sFinal $ _states carRental)
-      ret = (rentIncomes - transferFees) +
-            (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
-  in  ret
+      base = (rentIncomes - transferFees) +
+             (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
+      parkingFee = sum $ zipWith3 (\ s limit fee -> (s > limit) ? (fee, 0))
+                                  sFinal (_freeParkingLimit carRental) (_additionalParkingCost carRental)
+      transferSaving = sum $ zipWith (\ transfers saving -> (sum transfers > 0) ? (saving, 0))
+                                     a (_additionalTransferSaving carRental)      
+  in  base - parkingFee + transferSaving
 
 -----------------------------------------------------------------------------------------
 ---- policy improvement, update policy
