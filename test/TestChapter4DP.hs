@@ -94,6 +94,7 @@ doCarRentalTest config = do
 drawTwoLocationCarRental :: CarRental -> String -> IO ()
 drawTwoLocationCarRental carRental experimentName = do
   putStrLn "Draw Two Location Car Rental Result Graph"
+  -- dataX is the second location, whereas dataY is the first location
   let dataX = toList $ fmap (\ (f:s:[]) -> s) (_states carRental) 
       dataY = toList $ fmap (\ (f:s:[]) -> f) (_states carRental)
       (dataZ::[Int]) = toList (Seq.zipWith (\ i saPair -> calcZ . foldl (zipWith (+)) [0, 0] $ Seq.index saPair i)
@@ -122,21 +123,23 @@ drawTwoLocationCarRental carRental experimentName = do
   -- avoid Matplotlib's bug  
   code figure >> code valueFigure >> onscreen figure >> onscreen valueFigure
   -- also output table format
-  let moveResult = showAsTable [0..(_maxCars carRental)!!0] [0..(_maxCars carRental)!!1] (map fromIntegral dataZ)
-      stateResult = showAsTable [0..(_maxCars carRental)!!0] [0..(_maxCars carRental)!!1] dataValue
+  let moveResult = showAsTable [0..(_maxCars carRental)!!0]
+                               [0..(_maxCars carRental)!!1] (map fromIntegral dataZ) False
+      stateResult = showAsTable [0..(_maxCars carRental)!!0]
+                                [0..(_maxCars carRental)!!1] dataValue True
   putStrLn moveResult
   putStrLn stateResult
   where
   calcZ :: [Int] -> Int
   calcZ (firstLocation:secondLocation:[]) = 
-            (firstLocation > 0) ? (firstLocation, negate secondLocation)
+            (firstLocation > 0) ? (negate firstLocation, secondLocation)
   calcZ _ = error "Not correct action move"
 
 -- output in github markdown format
-showAsTable :: [Int] -> [Int] -> [Double] -> String
-showAsTable col row vals =
+showAsTable :: [Int] -> [Int] -> [Double] -> Bool -> String
+showAsTable col row vals bFloat =
   let colLen = length col
-      header = "second \\ First | " ++ (concat $ map ((++ "|") . show) col) ++ "\n"
+      header = "First / second -> | " ++ (concat $ map ((++ "|") . show) col) ++ "\n"
       alignHeader = (concat . take (colLen + 1) $ repeat "|:-----:") ++ "|\n"
       showRows = concat $ map (go colLen vals) row
   in  header ++ alignHeader ++ showRows
@@ -144,4 +147,5 @@ showAsTable col row vals =
   go len vals rowIdx =
     let first = show rowIdx ++ "|"
         rows = take len $ drop (len * rowIdx) vals
-    in  first ++ (concat $ map (\ x -> "|" ++ (printf "%7.2f" x :: String)) rows) ++ "|\n"
+        format = bFloat ? ("%7.2f", "%7d")
+    in  first ++ (concat $ map (\ x -> (printf format x :: String) ++ "|") rows) ++ "|\n"
