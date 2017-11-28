@@ -140,7 +140,7 @@ drawTwoLocationCarRental carRental experimentName = do
 showAsTable :: [Int] -> [Int] -> [Double] -> Bool -> String
 showAsTable col row vals bFloat =
   let colLen = length col
-      header = "First / second -> | " ++ (concat $ map ((++ "|") . show) col) ++ "\n"
+      header = "|First/second| " ++ (concat $ map ((++ "|") . show) col) ++ "\n"
       alignHeader = (concat . take (colLen + 1) $ repeat "|:-----:") ++ "|\n"
       showRows = concat $ map (go colLen vals) row
   in  header ++ alignHeader ++ showRows
