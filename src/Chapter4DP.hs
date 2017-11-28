@@ -8,12 +8,16 @@
 module Chapter4DP
     ( CarRental(..)
     , mkCarRental
-    , step
+    , carRentalStep
     , showCarRentalResult
+    , Gambler(..)
+    , mkGambler
+    , gamblerStep
+    , showGamblerResult
     ) where
 
 import           Control.Monad
-import           Control.Monad.IO.Class
+import           Control.Monad.ST
 import           Control.Monad.Trans.State
 
 import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
@@ -23,6 +27,9 @@ import           Data.Maybe
 
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import qualified Data.Vector.Unboxed as VU
+import qualified Data.Vector.Unboxed.Mutable as VUM
+
 import           Language.Haskell.TH
 
 -- project
@@ -139,8 +146,8 @@ filterPossibilities (s:ss) maxCarNums possibleMoves =
 -- | learning: Policy Iteration Page-65 (Not In Place Update)
 --             Initially use stochastic policy, then use greedy
 
-step :: State CarRental (Bool, Int)
-step = get >>= policyEvaluation >>= put >> get >>= policyImprovement
+carRentalStep :: State CarRental (Bool, Int)
+carRentalStep = get >>= policyEvaluation >>= put >> get >>= policyImprovement
 
 -- TODO: not take parking, saving into account
 policyEvaluation :: CarRental -> State CarRental CarRental
@@ -228,4 +235,31 @@ policyImprovement carRental = do
      then pure (True, 100)
      else pure (False, percent)
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+-- Gambler Problem
+--   undiscounted, episodeic finite MDP, reward 1 when reaches goal, otherwise 0
+
+data Gambler = Gambler {
+    headProb :: Double
+  , thetaCriterion :: Double
+  , goal :: Int
+  , stateVals :: VU.Vector Double -- in-place update, using mutable array
+  } deriving (Show)
+
+
+mkGambler :: Double -> Double -> Int -> Gambler
+mkGambler prob theTheta gamblerGoal = 
+  Gambler prob theTheta gamblerGoal (VU.fromList (take gamblerGoal $ repeat 0.0))
+
+gamblerValueIteration :: Gambler -> State Gambler Gambler
+gamblerValueIteration gambler = pure gambler
+
+gamblerOptimalPolicy :: Gambler -> State Gambler Gambler
+gamblerOptimalPolicy gambler = pure gambler
+
+gamblerStep :: State Gambler ()
+gamblerStep = get >>= gamblerValueIteration >>= gamblerOptimalPolicy >>= put
+  
+showGamblerResult :: Gambler -> String
+showGamblerResult = show

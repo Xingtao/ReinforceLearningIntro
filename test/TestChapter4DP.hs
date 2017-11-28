@@ -44,7 +44,11 @@ testChapter4 configPath = do
   (config, _) <- autoReload autoConfig [Required configPath]
   (bCarRental :: Bool) <- require config "enable.bCarRental"
   when bCarRental (doCarRentalTest config)
- 
+  (bGambler :: Bool) <- require config "enable.bGamblerProblem"
+  when bGambler (doGamblerTest config)
+
+----------------------------------------------------------------------------------------------------
+-- Car Rental Test
 doCarRentalTest :: Config -> IO () 
 doCarRentalTest config = do
   (experimentName::String) <- require config "carRental.experiment"
@@ -80,7 +84,7 @@ doCarRentalTest config = do
     pure carRental'
     where
     loop pg carRental = do
-      let (!(bFinish, percent), !carRental') = runState step carRental
+      let (!(bFinish, percent), !carRental') = runState carRentalStep carRental
       case bFinish of
          False -> do
            stat <- getProgressStats pg
@@ -150,3 +154,22 @@ showAsTable col row vals bFloat =
         rows = take len $ drop (len * rowIdx) vals
         format = bFloat ? ("%7.2f", "%7.0f")
     in  first ++ (concat $ map (\ x -> (printf format x :: String) ++ "|") rows) ++ "|\n"
+
+----------------------------------------------------------------------------------------------------
+-- Gambler Problem Test
+
+doGamblerTest :: Config -> IO () 
+doGamblerTest config = do
+  (prob::Int) <- require config "gambler.headProb"
+  (gamblerGaol::Double) <- require config "gambler.goal"
+  (theTheta::Double) <- require config "gambler.theta"
+  let gambler = mkGambler prob theTheta gamblerGaol
+  -- do experiments
+  let (_, !gambler') = runState gamblerStep carRental
+  drawGamblerGraph gambler'
+  threadDelay 100000
+  showGamblerResult gambler'
+  pure ()
+
+drawGamblerGraph :: Gambler -> IO ()
+drawGamblerGraph gambler' = pure ()
