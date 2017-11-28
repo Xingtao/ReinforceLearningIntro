@@ -156,7 +156,6 @@ policyEvaluation carRental = do
   newStateVals <- updateStateValues carRental oldStateVals
   let !carRental' = carRental & (stateValues .~ newStateVals)
       !maxDiff = argmax $ toList (Seq.zipWith (\ x y -> abs (x-y)) newStateVals oldStateVals)
-      !zero = traceShow newStateVals 0
   if maxDiff < (_theta carRental)
      then pure carRental'
      else policyEvaluation carRental'
@@ -244,22 +243,43 @@ data Gambler = Gambler {
     headProb :: Double
   , thetaCriterion :: Double
   , goal :: Int
-  , stateVals :: VU.Vector Double -- in-place update, using mutable array
+  , stateVals :: VU.Vector Double
+  , stateAct :: [Int]
   } deriving (Show)
-
-
-mkGambler :: Double -> Double -> Int -> Gambler
-mkGambler prob theTheta gamblerGoal = 
-  Gambler prob theTheta gamblerGoal (VU.fromList (take gamblerGoal $ repeat 0.0))
-
-gamblerValueIteration :: Gambler -> State Gambler Gambler
-gamblerValueIteration gambler = pure gambler
-
-gamblerOptimalPolicy :: Gambler -> State Gambler Gambler
-gamblerOptimalPolicy gambler = pure gambler
-
-gamblerStep :: State Gambler ()
-gamblerStep = get >>= gamblerValueIteration >>= gamblerOptimalPolicy >>= put
   
 showGamblerResult :: Gambler -> String
 showGamblerResult = show
+
+mkGambler :: Double -> Double -> Int -> Gambler
+mkGambler prob theTheta gamblerGoal = 
+  Gambler prob theTheta gamblerGoal
+          (VU.fromList (take (gamblerGoal - 1) (repeat 0.0) ++ [1.0])) []
+
+------------------------------------------------------------------------------------------
+
+gamblerStep :: State Gambler ()
+gamblerStep = get >>= gamblerValueIteration >>= gamblerOptimalPolicy >>= put
+
+-- in-place update, convert to mutable array
+gamblerValueIteration :: Gambler -> State Gambler Gambler
+gamblerValueIteration gambler = do
+  capStates <- VU.thaw (stateVals gambler)
+  foldM_ evalAndImprove capStates [1..(goal gambler - 1)]
+  newCapState <- VU.freeze capStates
+  let gambler' = gambler {stateVals = newCapState}
+  maxDiff <- VU.maximum <$> zipWithM ((abs .) . (-)) capStates newCapState
+  if maxDiff < thetaCriterion gambler
+     then put gambler'
+     else gamblerValueIteration gambler'
+  where
+  evalAndImprove mutableStateVals index = do
+    let possibleActions = [0..(min index (goal gambler - index))]
+    returns <- mapM (\ act -> (headProb gambler) * (VUM.read mutableStateVals (index+act)) + 
+                              (1.0 - headProb gambler) * (VUM.read mutableStateVals (index-act))
+                    ) possibleActions
+    pure mutableStateVals
+    -- argmax returns 
+    -- write                
+
+gamblerOptimalPolicy :: Gambler -> State Gambler Gambler
+gamblerOptimalPolicy gambler = pure gambler

@@ -160,16 +160,16 @@ showAsTable col row vals bFloat =
 
 doGamblerTest :: Config -> IO () 
 doGamblerTest config = do
-  (prob::Int) <- require config "gambler.headProb"
-  (gamblerGaol::Double) <- require config "gambler.goal"
+  (prob::Double) <- require config "gambler.headProb"
+  (gamblerGoal::Int) <- require config "gambler.goal"
   (theTheta::Double) <- require config "gambler.theta"
-  let gambler = mkGambler prob theTheta gamblerGaol
+  let gambler = mkGambler prob theTheta gamblerGoal
   -- do experiments
-  let (_, !gambler') = runState gamblerStep carRental
+  let (_, !gambler') = runState gamblerStep gambler
   drawGamblerGraph gambler'
   threadDelay 100000
-  showGamblerResult gambler'
+  putStrLn $ showGamblerResult gambler'
   pure ()
 
 drawGamblerGraph :: Gambler -> IO ()
-drawGamblerGraph gambler' = pure ()
+drawGamblerGraph gambler = pure ()
