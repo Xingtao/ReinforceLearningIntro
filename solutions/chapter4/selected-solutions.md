@@ -68,7 +68,7 @@ __Car Rental State Values__
 
 ### Car Rental Exercise 4.5
 __Car Rental__
-![alt text](figures/4-5.png "Car Rental Exercise 4.5")
+![alt text](figures/exercise_4-5_optimal_actions.png "Car Rental State Values")
 
 __Exercise 4.5 Policy__
 
@@ -97,6 +97,7 @@ __Exercise 4.5 Policy__
 20|      5|      5|      5|      5|      3|      3|      2|      1|      1|      1|      1|      1|      0|      0|      0|      0|      0|      0|      1|      1|      0||
 
 __Exercise 4.5 State Values__
+![alt text](figures/exercise_4-5_state_values.png "Car Rental State Values")
 
 |First/second| 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|
 |:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|

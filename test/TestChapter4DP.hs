@@ -187,4 +187,3 @@ drawGamblerGraph gambler = do
   -- avoid Matplotlib's bug  
   code policyFigure >> code valueFigure >> onscreen policyFigure >> onscreen valueFigure
   threadDelay 100000
-  
