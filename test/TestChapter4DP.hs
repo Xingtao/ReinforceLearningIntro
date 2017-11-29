@@ -164,8 +164,7 @@ doGamblerTest config = do
   (gamblerGoal::Int) <- require config "gambler.goal"
   (theTheta::Double) <- require config "gambler.theta"
   let gambler = mkGambler prob theTheta gamblerGoal
-  -- do experiments
-  let (_, !gambler') = runState gamblerStep gambler
+      (_, !gambler') = runState gamblerStep gambler
   drawGamblerGraph gambler'
   threadDelay 100000
   putStrLn $ showGamblerResult gambler'

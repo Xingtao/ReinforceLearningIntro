@@ -125,7 +125,7 @@ step = do
   w <- get
   let w' = updateState w
   put w'
-  let convergeDiff = argmax $ zipWith ((abs .) . (-)) (_stateValues w) (_stateValues w')
+  let convergeDiff = maximum $ zipWith ((abs .) . (-)) (_stateValues w) (_stateValues w')
   pure convergeDiff
 
 updateState :: World -> World
@@ -146,6 +146,6 @@ updateState w =
                           in  0.25 * (r + (_discount w) * (valueOfState values s' size))
                   ) actions
       PolicyOptimal -> -- Bellman Optimality Equation
-        argmax $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
-                             in  r + (_discount w) * (valueOfState values s' size)
-                     ) actions
+        maximum $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
+                              in  r + (_discount w) * (valueOfState values s' size)
+                      ) actions
