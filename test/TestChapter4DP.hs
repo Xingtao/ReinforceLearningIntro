@@ -18,13 +18,14 @@ import           Data.Configurator.Types
 import           Data.List.Split (chunksOf)
 import           Data.Foldable (toList)
 
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import           Data.Text (Text)
-
 import           Data.Random
 import           Data.Random.Distribution
 import           Data.Random.Distribution.Poisson
+
+import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import           Data.Text (Text)
+import qualified Data.Vector.Unboxed as VU
 
 import           Graphics.Matplotlib hiding (def)
 
@@ -167,8 +168,23 @@ doGamblerTest config = do
       (_, !gambler') = runState gamblerStep gambler
   drawGamblerGraph gambler'
   threadDelay 100000
-  putStrLn $ showGamblerResult gambler'
   pure ()
 
 drawGamblerGraph :: Gambler -> IO ()
-drawGamblerGraph gambler = pure ()
+drawGamblerGraph gambler = do
+  putStrLn "Draw Gambler Problem Result Graph"
+  -- dataX is the second location, whereas dataY is the first location
+  let policyFigure = plot [0..(goal gambler)] (stateVals gambler)
+                       % xlabel ("Capital (head probability = " ++ (show $ headProb gambler) ++ ")")
+                       % ylabel "Value Estimates"
+                       % xticks [0, 10..(goal gambler)]
+                       % title ("Figure 4.3 - State Values")
+      valueFigure = scatter [0..(goal gambler - 1)] (stateActs gambler)
+                      % xlabel ("Capital (head probability = " ++ (show $ headProb gambler) ++ ")")
+                      % ylabel "Final Policy (Stack)"
+                      % xticks [0, 10..(goal gambler)]
+                      % title ("Figure 4.3 - Optimal Actions")
+  -- avoid Matplotlib's bug  
+  code policyFigure >> code valueFigure >> onscreen policyFigure >> onscreen valueFigure
+  threadDelay 100000
+  

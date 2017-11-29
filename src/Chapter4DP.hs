@@ -13,7 +13,6 @@ module Chapter4DP
     , Gambler(..)
     , mkGambler
     , gamblerStep
-    , showGamblerResult
     ) where
 
 import           Control.Monad
@@ -245,12 +244,9 @@ data Gambler = Gambler {
   , thetaCriterion :: Double
   , goal :: Int
   , stateVals :: VU.Vector Double
-  , stateAct :: VU.Vector Int
+  , stateActs :: VU.Vector Int
   } deriving (Show)
   
-showGamblerResult :: Gambler -> String
-showGamblerResult = show
-
 mkGambler :: Double -> Double -> Int -> Gambler
 mkGambler prob theTheta gamblerGoal = 
   Gambler prob theTheta gamblerGoal
@@ -271,12 +267,12 @@ gamblerValueIteration gambler = do
 runValueIteration :: Gambler -> Gambler
 runValueIteration gambler = runST $ do
   mutStates <- VU.thaw (stateVals gambler)
-  mutActs <- VU.thaw (stateAct gambler)
+  mutActs <- VU.thaw (stateActs gambler)
   (mutStates', mutActs') <- foldM evalAndImprove (mutStates, mutActs) [1..(goal gambler - 1)]
   newState <- VU.freeze mutStates'
   newActs <- VU.freeze mutActs'
   let !maxDiff = VU.maximum $ VU.zipWith ((abs .) . (-)) (stateVals gambler) newState
-      gambler' = gambler {stateVals = newState, stateAct = newActs}
+      gambler' = gambler {stateVals = newState, stateActs = newActs}
   if maxDiff < thetaCriterion gambler
      then pure gambler'
      else pure $ runValueIteration gambler'
