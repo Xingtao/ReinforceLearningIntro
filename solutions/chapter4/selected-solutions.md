@@ -10,7 +10,7 @@
 ### 1. Car Rental 
 
 __Car Rental__
-![alt text](figures/carRental.png "Car Rental Using Policy Iteration")
+![alt text](figures/figure_4-2.png "Car Rental Using Policy Iteration")
 
 __Car Rental Policy__
 
@@ -39,6 +39,7 @@ First/second| 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|
 20|      5|      5|      5|      4|      4|      3|      2|      2|      2|      2|      2|      2|      1|      1|      1|      1|      1|      1|      0|      0|      0||
 
 __Car Rental State Values__
+![alt text](figures/figure_4-2_state_values.png "Car Rental State Values")
 
 |First/second| 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|
 |:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
@@ -120,3 +121,22 @@ __Exercise 4.5 State Values__
 18| 552.23| 558.36| 563.74| 568.51| 572.83| 577.03| 581.11| 585.05| 588.42| 591.08| 592.95| 594.30| 595.36| 596.00| 596.44| 596.83| 597.22| 597.61| 598.02| 598.41| 598.74||
 19| 555.39| 561.25| 566.34| 570.84| 575.04| 579.11| 583.05| 586.80| 590.04| 592.57| 594.30| 595.38| 596.33| 596.86| 597.21| 597.50| 597.80| 598.11| 598.43| 598.74| 599.03||
 20| 558.27| 563.91| 568.77| 573.04| 577.12| 581.06| 584.81| 588.22| 591.34| 593.75| 595.38| 596.33| 597.00| 597.45| 597.72| 597.95| 598.19| 598.44| 598.74| 599.03| 599.23||
+
+----
+
+__Exercise 4.9 Gambler Problem__
+
+#### head probability = 0.4
+
+![alt text](figures/exercise_4-9_state_values.png "Gambler Problem")
+![alt text](figures/exercise_4-9_optimal_actions.png "Gambler Problem")
+
+#### head probability = 0.25
+
+![alt text](figures/exercise_4-9_state_values_2.png "Gambler Problem")
+![alt text](figures/exercise_4-9_optimal_actions_2.png "Gambler Problem")
+
+#### head probability = 0.55
+
+![alt text](figures/exercise_4-9_state_values_3.png "Gambler Problem")
+![alt text](figures/exercise_4-9_optimal_actions_3.png "Gambler Problem")
