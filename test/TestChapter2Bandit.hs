@@ -294,7 +294,6 @@ drawExperimentsCurves config (rewards, actions) = do
 
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
--- will take a relative long time ( minutes in a 4 core I5 2.6GHz Cpu)
 greedyEpsilons = [(-7) .. (-1)]
 -- greedy with different initial values and a constant stepSize 0.1
 greedyInitValues = [(-2) .. 3]
