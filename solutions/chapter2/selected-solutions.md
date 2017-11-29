@@ -4,7 +4,11 @@
 > ![alt text](figures/exercise_2-1.png "Exercise 2.1")
 
 #### `Exercise 2.2`
-![alt text](figures/2-2.png "Exercise 2.2")
+> Definitely occured: time step 2 and 5; might occur:time step 1, 3 and 4;
+
+#### `Exercise 2.3`
+> epsilon = 0.01 will perform better in long run.
+> ![alt text](figures/exercise_2-3.png "Exercise 2.3")
 
 ---
 

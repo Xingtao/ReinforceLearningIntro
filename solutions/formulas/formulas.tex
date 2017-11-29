@@ -8,7 +8,15 @@
 % Exercise 2.1
 \[
   \begin{aligned}
-  p_{greey} = \epsilon + (1 - \epsilon) * 0.5 = 0.75
+    p_{Greedy} = (1 - \varepsilon) + \varepsilon * 1/2 = 0.75
+  \end{aligned}
+\]
+
+% Exercise 2.3
+\[
+  \begin{aligned}    
+    \lim\limits_{step\to+\infty} (p_{\varepsilon=0.1}^{best \ action}) &= 1 - \varepsilon + 1/10 * \varepsilon = 0.91 \\
+    \lim\limits_{step\to+\infty} (p_{\varepsilon=0.01}^{best \ action}) &= 1 - \varepsilon + 1/10 * \varepsilon = 0.991
   \end{aligned}
 \]
 
