@@ -14,9 +14,23 @@
 
 % Exercise 2.3
 \[
-  \begin{aligned}    
+  \begin{aligned}
     \lim\limits_{step\to+\infty} (p_{\varepsilon=0.1}^{best \ action}) &= 1 - \varepsilon + 1/10 * \varepsilon = 0.91 \\
     \lim\limits_{step\to+\infty} (p_{\varepsilon=0.01}^{best \ action}) &= 1 - \varepsilon + 1/10 * \varepsilon = 0.991
+  \end{aligned}
+\]
+
+% Exercise 2.5
+\[
+  \begin{aligned}
+    Q_{n+1} &= Q_{n} + \alpha_n (R_n - Q_n) = (1 - \alpha_n(a))Q_n + \alpha_n(a)R_n \\
+            &= (1 - \alpha_n(a))((1 - \alpha_{n-1}(a))Q_{n-1} + \alpha_{n-1}(a)R_{n-1}) + \alpha_n(a)R_n\\
+            & \quad \vdots\\
+            &= (1 - \alpha_n(a))\cdots(1-\alpha_1(a))Q_1 + \\
+            & \qquad \qquad (1 - \alpha_n(a))\cdots(1-\alpha_2(a))\alpha_1(a)R_1 + \\
+            & \qquad \qquad \ddots\\
+            & \qquad \qquad (1 - \alpha_n(a))\alpha_{n-1}(a)R_{n-1} + \alpha_n(a)R_n \\
+            &= Q_1\prod^n_{i=1}(1 - \alpha_i(a)) + \sum^n_{i=1} (\alpha_iR_i \prod^n_{j=i+1}(1-\alpha_j))
   \end{aligned}
 \]
 
