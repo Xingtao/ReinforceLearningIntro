@@ -320,9 +320,9 @@ drawFigure2_6 config = do
          )  eGreedyParams         
   let !eGreedyAverage = calcAverage 0 totalStep eGreedyResults
       !eGreedyAction = calcAverage totalStep totalStep eGreedyResults
-      eGreedyAverageCurve = mp % plot greedyEpsilons eGreedyAverage
+      !eGreedyAverageCurve = mp % plot greedyEpsilons eGreedyAverage
                                  @@ [o2 "label" "epsilon-greedy"]
-      eGreedyActionCurve = mp % plot greedyEpsilons eGreedyAction
+      !eGreedyActionCurve = mp % plot greedyEpsilons eGreedyAction
                                 @@ [o2 "label" "epsilon-greedy"]
   
   -- 2. different e-greedy init values with epsilon = 0.0 and stepSize = 0.1

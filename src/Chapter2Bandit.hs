@@ -47,7 +47,7 @@ import           Utils
 --      here, 'stepSize' parameter in configuration file:
 --        if < 0, use 'sample average', then it is stationary;
 --        if > 0, use 'exponential, recency-weighted average',
---                then it's non-stationary, weight recent reward more.
+--                then it targets non-stationary problem, weight recent reward more.
 --   2. Gradient bandit using gradient approximation, estimate value as preference:
 --           newValue = oldValue + stepSize * (curReward - baselineVal) * ( 1 - softmax)
 --           for the selected action's state value update
@@ -124,30 +124,30 @@ takeOneAction :: Int -> StateT Bandit IO Double
 takeOneAction actionN = do
   bandit <- get
   reward <- liftIO $ sample (_srcRVars bandit !! actionN)
-  let bestTake = (_bestValueIdx bandit == actionN) ? (1.0, 0.0)
-      bandit' = bandit & (nActions . element actionN +~ 1)
-                       & (totalReward +~ reward)
-                       & (curStep +~ 1)
-                       & (bestTakes %~ (++ [bestTake]))
-      bandit'' = stateUpdate bandit' actionN reward
+  let !bestTake = (_bestValueIdx bandit == actionN) ? (1.0, 0.0)
+      !bandit' = bandit & (nActions . element actionN +~ 1)
+                        & (totalReward +~ reward)
+                        & (curStep +~ 1)
+                        & (bestTakes %~ (++ [bestTake]))
+      !bandit'' = stateUpdate bandit' actionN reward
   put bandit''
   pure reward
   where
   stateUpdate :: Bandit -> Int -> Double -> Bandit
   stateUpdate bandit actionN reward =
-    let actionTakes = (_nActions bandit) !! actionN
-        ss = (_stepSize bandit < 0) ? (1.0 / fromIntegral actionTakes, _stepSize bandit)
-        oldEstValue = (_qValues bandit) !! actionN
+    let !actionTakes = (_nActions bandit) !! actionN
+        !ss = (_stepSize bandit < 0) ? (1.0 / fromIntegral actionTakes, _stepSize bandit)
+        !oldEstValue = (_qValues bandit) !! actionN
     in  case _policy bandit of
           Gradient bBaseline ->
             let baseline = bBaseline ? (_totalReward bandit / (fromIntegral $ _curStep bandit), 0.0)
-                gradientValues = map exp (_qValues bandit)
-                gradientProbs = map ( / sum gradientValues) gradientValues
-                newEstValues = zipWith3 (updateGradientPreference reward baseline ss)
-                                        (_qValues bandit) gradientProbs [0..]
+                !gradientValues = map exp (_qValues bandit)
+                !gradientProbs = map ( / sum gradientValues) gradientValues
+                !newEstValues = zipWith3 (updateGradientPreference reward baseline ss)
+                                         (_qValues bandit) gradientProbs [0..]
             in  bandit & (qValues .~ newEstValues)
           -- epsilone greedy & ucb use the same updating formular
-          _ -> let newEstValue = oldEstValue + (reward - oldEstValue) * ss
+          _ -> let !newEstValue = oldEstValue + (reward - oldEstValue) * ss
                in  bandit & (qValues . element actionN .~ newEstValue)
   
   updateGradientPreference :: Double -> Double -> Double -> Double -> Double -> Int -> Double 
