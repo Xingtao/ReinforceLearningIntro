@@ -1,7 +1,22 @@
 ## Selected Reference Solution For Chapter 3
 
 `Exercise 3.4`
-![alt text](figures/exercise_3-4.png "Exercise 3.4")
+> ![alt text](figures/exercise_3-4.png "Exercise 3.4")
+
+`Exercise 3.5`
+> |s |a |s'|r |p(s',r|s,a)|
+> |=------|=------|=------|=------|=------|
+> |high |search  |high |r_search | alpha    |
+> |high |search  |low  |r_search | 1 - alpha|
+> |low  |search  |high |r_search | 0        |
+> |low  |search  |high |-3       | 1 - beta |
+> |low  |search  |low  |r_search | beta     |
+> |high |wait    |high |r_wait   | 1        |
+> |high |wait    |low  |r_wait   | 0        |
+> |low  |wait    |high |r_wait   | 0        |
+> |low  |wait    |low  |r_wait   | 1        |
+> |low  |recharge|high |0        | 1        |
+> |low  |recharge|low  |r_rechar | 0        |
 
 ---
 
