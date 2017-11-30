@@ -19,6 +19,9 @@
  |low  |recharge|high |0        | 1        |
  |low  |recharge|low  |r_rechar | 0        |
 
+`Exercise 3.6`
+> ![alt text](figures/exercise_3-6.png "Exercise 3.6")
+
 ---
 
 ## Experiments Results For Chapter 3
