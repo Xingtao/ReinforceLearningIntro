@@ -1,7 +1,7 @@
 ## Selected Reference Solution For Chapter 3
 
-`Exercise 3.21`
-![alt text](figures/3-21.png "Exercise 3.21")
+`Exercise 3.4`
+![alt text](figures/exercise_3-4.png "Exercise 3.4")
 
 ---
 
