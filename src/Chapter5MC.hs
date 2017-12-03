@@ -27,6 +27,10 @@ import qualified Data.Sequence as Seq
 import qualified Data.Vector.Unboxed as VU
 import qualified Data.Vector.Unboxed.Mutable as VUM
 
+import           Data.Random
+import           Data.Random.Distribution
+import           Data.Random.Distribution.Bernoulli
+
 import           Language.Haskell.TH
 
 -- project
@@ -38,66 +42,29 @@ import           Utils
 
 data BJAct = Hit | Stand deriving (Show)
 
+
 ------------------------------------------------------------------------------------------
 data Blackjack = Blackjack {
      _locationNum :: Int
-    ,_theta :: Double
-    ,_discount :: Double
-    ,_maxCars :: [Int]
-    ,_rentalCredit :: [Double]
-    ,_transferCost :: [Double]
-    ,_maxTransferCars :: [Int]
-    ,_freeParkingLimit :: [Int]
-    ,_additionalParkingCost :: [Double]
-    ,_additionalTransferSaving :: [Double]
-    -- input randoms
-    ,_rentLambda :: [Double]
-    ,_returnLambda :: [Double]
-    -- state & action: using the same index
-    ,_states :: Seq [Int]
-    -- if < 0, using stochastic policy (try every action equprob) as initial policy
-    ,_actions :: Seq Int
-    ,_possibleActions :: Seq (Seq [[Int]]) -- transfer out for each location
-    ,_stateValues :: Seq Double -- will do in place update (Seq.update at n)
-    ,_rentPoissonR :: [[(Int, Double)]]
-    ,_returnPoissonR :: [[(Int, Double)]]
-    ,_jointRentR :: [(Double, [Int])]
-    ,_jointReturnR :: [(Double, [Int])]
+    ,_policyPlayer :: [BJAct]
+    ,_policyDealer :: [BJAct]
     } deriving (Show)
 
 makeLenses ''Blackjack
 
-mkBlackjack :: Int -> Double -> Double -> [Int] -> [Double] -> [Double] -> [Int] ->
-                      [Int] -> [Double] -> [Double] -> [Double] -> [Double] -> Blackjack
+mkBlackjack :: Blackjack
 mkBlackjack nLocations theTheta gamma maxCarNums earns
-            transCost maxTrans freeLimit parkFee savings rent return =
   Blackjack nLocations theTheta gamma maxCarNums earns 
-            transCost maxTrans freeLimit parkFee savings rent return
-            (Seq.fromList allStates) initActions
-            (Seq.fromList $ map Seq.fromList possibleActions) stateVals
-            rentPoissonDist returnPoissonDist jointRentDist jointReturnDist
-  where
-  allStates = generateStates maxCarNums
-  initActions = Seq.fromList . take (length allStates) $ repeat (-1)
-  stateVals = Seq.fromList . take (length allStates) $ repeat 0.0
-  possibleActions = filterPossibilities allStates maxCarNums $ generateMoves maxTrans
-  prob lambda n = lambda ^ (fromIntegral n) / (fromIntegral $ factorial n)  * (exp $ negate lambda)
-  -- NOTE: ignore poisson probability < 1% (take as 0)
-  rentPoissonDist =
-    zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.001) .
-                                map (\ n -> (n, prob lambda n)) $ [0..maxN]) rent maxCarNums 
-  returnPoissonDist =
-    zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.001) .
-                                map (\ n -> (n, prob lambda n)) $ [0..maxN]) return maxCarNums
-  jointRentDist = map go (joint rentPoissonDist)
-  jointReturnDist = map go (joint returnPoissonDist)
-  go = foldl (\(p', v') (v, p) -> (p'*p, v' ++ [v])) (1.0, [])
-  -- joint distributions over all locations
-  joint :: [[(Int, Double)]] -> [[(Int, Double)]]
-  joint [] = [[]]
-  joint (x:xs) = [(y:ys) | y <- x, ys <- joint xs]
 
--- | Car Rental Helpers
+-- helpers
+-- draws with replacement, for randomElement return pure RVar(no memory)
+nextCard :: IO Int
+nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
+
+def play(fn, initS, initA):
+  1, init player & dealers' state (use ace & dealer's one card)
+
+
 showBlackjackResult :: Blackjack -> String
 showBlackjackResult blackjack =
   concat . toList $ Seq.zipWith4
