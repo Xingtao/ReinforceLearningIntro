@@ -149,7 +149,6 @@ filterPossibilities (s:ss) maxCarNums possibleMoves =
 carRentalStep :: State CarRental (Bool, Int)
 carRentalStep = get >>= policyEvaluation >>= put >> get >>= policyImprovement
 
--- TODO: not take parking, saving into account
 policyEvaluation :: CarRental -> State CarRental CarRental
 policyEvaluation carRental = do
   let oldStateVals = _stateValues carRental

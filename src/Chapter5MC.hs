@@ -22,10 +22,7 @@ import           Data.List(take, repeat)
 import           Data.Foldable (toList)
 import           Data.Maybe
 
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import qualified Data.Vector.Unboxed as VU
-import qualified Data.Vector.Unboxed.Mutable as VUM
+import qualified Data.Map.Strict as M
 
 import           Data.Random
 import           Data.Random.Distribution
@@ -39,82 +36,42 @@ import           Utils
 
 ------------------------------------------------------------------------------------------
 -- | Monte Carlo Method Experiment: Blackjack
+--   Will implement: MonteCarlo-E-Soft(On-Policy), MonteCarlo-Off-Policy
 
-data BJAct = Hit | Stand deriving (Show)
-
+-- ((sum, dealer's one card, usable ace), hit/stand)
+type SAPair = ((Int, Int, Bool), Bool) 
 
 ------------------------------------------------------------------------------------------
+-- epsilon-soft 
 data Blackjack = Blackjack {
-     _locationNum :: Int
-    ,_policyPlayer :: [BJAct]
-    ,_policyDealer :: [BJAct]
+     _epsilon :: Double 
+    ,_sa :: M SAPair Int
+    ,_qValues :: [Double]
+    ,_saReturns :: [Double]
+    ,_policy :: [Bool] -- True: hit, False: stand
     } deriving (Show)
 
 makeLenses ''Blackjack
 
-mkBlackjack :: Blackjack
-mkBlackjack nLocations theTheta gamma maxCarNums earns
-  Blackjack nLocations theTheta gamma maxCarNums earns 
+mkBlackjack :: Double -> Blackjack
+mkBlackjack epsilon =
+  let sas = [((s, d, a), bHit) <- s <- [12..21], d <- [1..10], a <- [True, False], bHit <- [True, False]]
+      initQVals = take (length sas) (repeat 0.0)
+      initSAReturns = take (length sas) (repeat 0.0)
+  Blackjack epsilon (M.fromList $ zip sas [0..]) initQVals initSAReturns
 
 -- helpers
 -- draws with replacement, for randomElement return pure RVar(no memory)
 nextCard :: IO Int
 nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
 
-def play(fn, initS, initA):
-  1, init player & dealers' state (use ace & dealer's one card)
-
-
-showBlackjackResult :: Blackjack -> String
-showBlackjackResult blackjack =
-  concat . toList $ Seq.zipWith4
-    (\ s actionIdx saPair val ->
-       show s ++ " -> " ++ (show $ Seq.index saPair actionIdx) ++ " -> " ++ show val ++ "\n")
-    (_states blackjack) (_actions blackjack) (_possibleActions blackjack) (_stateValues blackjack)
-
--- generate all states for multiple locations
-generateStates :: [Int] -> [[Int]]
-generateStates [] = [[]]
-generateStates (x:xs) = [(y:ys) | y <- [0..x], ys <- generateStates xs]
-
--- generate one location's tansfer out possibilities
-generateOneMove :: Int -> Int -> [[Int]]
-generateOneMove 0   n = [[]]
-generateOneMove len n = [(x:xs) | x <- [0..n], xs <- generateOneMove (len - 1) n, sum (x:xs) <= n]
-
--- combine all possible transfer moves
-generateMoves :: [Int] -> [[[Int]]]
-generateMoves trans = go moves
-  where
-  go [] = [[]]
-  go (x:xs) = [(y:ys) | y <- x, ys <- go xs]
-  moves = map (generateOneMove (length trans)) trans
-
--- filter impossible transfer moves
-filterPossibilities :: [[Int]] -> [Int] -> [[[Int]]] -> [[[[Int]]]]
-filterPossibilities [] _ _ = []
-filterPossibilities (s:ss) maxCarNums possibleMoves =
-  filter (go maxCarNums s) possibleMoves : filterPossibilities ss maxCarNums possibleMoves
-  where
-  go :: [Int] -> [Int] -> [[Int]] ->Bool
-  go maxCarNums s move =
-    let moveLocationNums = foldl (zipWith (+)) (take (length s) $ repeat 0) move
-        c1 = and $ zipWith3 (\ x y z -> x + y <= z) s moveLocationNums maxCarNums
-        c2 = and $ zipWith3 (\ index curNum m -> (m!!index == 0) && (sum m <= curNum)) [0..] s move
-    in  c1 && c2
-
--- showSAPair
-
 --------------------------------------------------------------------------------
--- | learning: Policy Iteration Page-65 (Not In Place Update)
---             Initially use stochastic policy, then use greedy
-
 blackjackStep :: State Blackjack (Bool, Int)
-blackjackStep = get >>= policyEvaluation >>= put >> get >>= policyImprovement
+blackjackStep = get >>= oneEpisode >>= put >> get >>= policyImprovement
 
--- TODO: not take parking, saving into account
-policyEvaluation :: Blackjack -> State Blackjack Blackjack
-policyEvaluation blackjack = do
+
+oneEpisode :: Blackjack -> State Blackjack Blackjack
+oneEpisode blackjack = do
   let oldStateVals = _stateValues blackjack
   newStateVals <- updateStateValues blackjack oldStateVals
   let !blackjack' = blackjack & (stateValues .~ newStateVals)
