@@ -39,7 +39,7 @@ import           Utils
 --   Will implement: MonteCarlo-E-Soft(On-Policy), MonteCarlo-Off-Policy
 
 -- ((sum, dealer's one card, usable ace), hit/stand)
-type SAPair = ((Int, Int, Bool), Bool) 
+type SAPair = ((Int, Int, Bool), Bool)
 
 ------------------------------------------------------------------------------------------
 -- epsilon-soft 
@@ -55,7 +55,8 @@ makeLenses ''Blackjack
 
 mkBlackjack :: Double -> Blackjack
 mkBlackjack epsilon =
-  let sas = [((s, d, a), bHit) <- s <- [12..21], d <- [1..10], a <- [True, False], bHit <- [True, False]]
+  let sas = [((s, d, a), bHit) | s <- [12..21], d <- [1..10],
+                                 a <- [True, False], bHit <- [True, False]]
       initQVals = take (length sas) (repeat 0.0)
       initSAReturns = take (length sas) (repeat 0.0)
   Blackjack epsilon (M.fromList $ zip sas [0..]) initQVals initSAReturns
@@ -66,14 +67,16 @@ nextCard :: IO Int
 nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
 
 --------------------------------------------------------------------------------
-blackjackStep :: State Blackjack (Bool, Int)
-blackjackStep = get >>= oneEpisode >>= put >> get >>= policyImprovement
-
-
-oneEpisode :: Blackjack -> State Blackjack Blackjack
+blackjackSteps :: Int -> Int -> StateT Blackjack IO Blackjack
+blackjackSteps count totalEpisode
+  | count >= totalEpisode = get >>= pure
+  | otherwise = get >>= oneEpisode >>= put
+      
+oneEpisode :: Blackjack -> StateT Blackjack IO Blackjack
 oneEpisode blackjack = do
-  let oldStateVals = _stateValues blackjack
-  newStateVals <- updateStateValues blackjack oldStateVals
+  dealerAppearCard <- liftIO $ nextCard
+  
+  type SAPair = ((Int, Int, Bool), Bool) 
   let !blackjack' = blackjack & (stateValues .~ newStateVals)
       !maxDiff = maximum $ toList (Seq.zipWith (\ x y -> abs (x-y)) newStateVals oldStateVals)
   if maxDiff < (_theta blackjack)
