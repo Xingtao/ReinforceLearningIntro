@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE BangPatterns         #-}
 
-module TestChapter5DP (
+module TestChapter5MC (
        testChapter5
       )where
 
@@ -34,7 +34,7 @@ import           System.Console.AsciiProgress(Options(..), Stats(..),
 import           Text.Printf
 -- project
 import           Utils
-import           Chapter5DP
+import           Chapter5MC
 
 testChapter5 :: FilePath -> IO ()
 testChapter5 configPath = do
