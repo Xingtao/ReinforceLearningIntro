@@ -26,7 +26,7 @@ import qualified Data.Map.Strict as M
 
 import           Data.Random
 import           Data.Random.Distribution
-import           Data.Random.Distribution.Bernoulli
+import           Data.Random.Distribution.Bernoulli (bernoulli)
 
 import           Language.Haskell.TH
 
@@ -61,11 +61,6 @@ mkBlackjack epsilon =
       initSAReturns = take (length sas) (repeat 0.0)
   in  Blackjack epsilon (M.fromList $ zip sas [0..]) initQVals initSAReturns
 
--- helpers
--- draws with replacement, for randomElement return pure RVar(no memory)
-nextCard :: IO Int
-nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
-
 --------------------------------------------------------------------------------
 blackjackStep :: StateT Blackjack IO Blackjack
 blackjackStep = get >>= oneEpisode >>= put
@@ -74,9 +69,16 @@ oneEpisode :: Blackjack -> StateT Blackjack IO Blackjack
 oneEpisode blackjack = do
   dealerCards <- liftIO $ replicateM 21 nextCard
   playerCards <- liftIO $ replicateM 21 nextCard
-  -- player first (explode first ...)
+  -- player first (explode first ...)  
+  let (dealerSum, _) = getSumViaFixedPolicy 17 dealerCards  
+  epsilonGreedyPlayOneEpisode blackjack playerCards (dealerSum, head dealerCards)
+  
+epsilonGreedyPlayOneEpisode :: Blackjack -> [Int] -> (Int, Int) -> StateT Blackjack IO Blackjack
+epsilonGreedyPlayOneEpisode blackjack playerCards (dealerSum, dealerFirstCard) = do
+  let qVals = _qValues blackjack
+        
 
-  let (dealerSum, aceAs11Num) = getSumViaFixedPolicy 17 dealerCards
+generateTrajectoryUsingEGreedy :: Blackjack -> playerCards -> 
 
   -- ((sum, dealer's one card, usable ace), hit/stand)
   type SAPair = ((Int, Int, Bool), Bool) 
@@ -84,8 +86,6 @@ oneEpisode blackjack = do
      _epsilon :: Double 
     ,_sa :: M SAPair Int
     ,_qValues :: [Double]
-    ,_saReturns :: [Double]
-    ,_act :: [Bool] -- True: hit, False: stand
     } deriving (Show)
 
 
@@ -101,4 +101,13 @@ getSumViaFixedPolicy standSum = foldl go (0, 0)
                             | acc + card > 21 && aceAs11Num > 0 = (acc + card - 10, aceAs11Num - 1)
                             | otherwise = (acc + card, aceAs11Num)
 
-generateTrajectoryUsingEGreedy :: Blackjack -> playerCards -> 
+--------------------------------------------------------------------------------
+-- helpers
+
+-- draws with replacement, for randomElement return pure RVar(no memory)
+nextCard :: IO Int
+nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
+
+-- epsilon greedy, also random select Hit or Stand
+headOrTail :: Double -> IO Bool
+headOrTail eps = sample $ bernoulli eps
