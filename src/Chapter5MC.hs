@@ -37,7 +37,7 @@ import           Utils
 -- | Monte Carlo Method Experiment: Blackjack
 --   Will implement: MonteCarlo-E-Soft(On-Policy), MonteCarlo-Off-Policy
 
-data Act = Hit | Stand deriving (Show, Ord, Eq)
+data Act = Hit | Stick deriving (Show, Ord, Eq)
 -- ((sum, dealer's one card, usable ace), act)
 type SAPair = ((Int, Int, Bool), Act)
 
@@ -52,7 +52,7 @@ makeLenses ''Blackjack
 mkBlackjack :: Double -> Blackjack
 mkBlackjack epsilon =
   let sas = [((s, d, bAce), a) | s <- [12..21], d <- [1..10],
-                                 bAce <- [True, False], a <- [Hit, Stand]]
+                                 bAce <- [True, False], a <- [Hit, Stick]]
   in  Blackjack epsilon (M.fromList $ zip sas (repeat 0.0))
 
 --------------------------------------------------------------------------------
@@ -84,14 +84,14 @@ generatePlayerTrajectory blackjack dfc (playerSum, aceNum) (x:xs)
   | playerSum < 11 = generatePlayerTrajectory blackjack dfc (playerSum + x, aceNum) xs
   | playerSum == 11 && x == 1 = generatePlayerTrajectory blackjack dfc (12, aceNum) xs
   | playerSum == 11 = generatePlayerTrajectory blackjack dfc (11 + x, aceNum) xs
-  | playerSum == 21 = pure [((21, dfc, useAce aceNum), Stand)]
+  | playerSum == 21 = pure [((21, dfc, useAce aceNum), Stick)]
   | playerSum > 21 = if (aceNum > 0)
                         then generatePlayerTrajectory blackjack dfc (playerSum - 10, aceNum - 1) xs
-                        else pure [((playerSum, dfc, False), Stand)]
+                        else pure [((playerSum, dfc, False), Stick)]
   | playerSum < 21 = do
       a <- epsilonGreedyAct blackjack (playerSum, dfc, useAce aceNum)
       case a of
-        Stand -> pure [((playerSum, dfc, useAce aceNum), Stand)]
+        Stick -> pure [((playerSum, dfc, useAce aceNum), Stick)]
         Hit -> (((playerSum, dfc, useAce aceNum), Hit) :) <$>
                  generatePlayerTrajectory blackjack dfc (playerSum + x, aceNum) xs
 
@@ -99,11 +99,11 @@ epsilonGreedyAct :: Blackjack -> (Int, Int, Bool) -> IO Act
 epsilonGreedyAct blackjack s = do
   bExplore <- headOrTail (_epsilon blackjack) -- head means explore
   case bExplore of
-    True -> headOrTail 0.5 >>= \ bHit -> pure (bHit ? (Hit, Stand)) -- head means hit
+    True -> headOrTail 0.5 >>= \ bHit -> pure (bHit ? (Hit, Stick)) -- head means hit
     False -> do
       let !hitVal = fromJust $ M.lookup (s, Hit) (_qValues blackjack)
-          !standVal = fromJust $ M.lookup (s, Stand) (_qValues blackjack)
-      pure ((hitVal > standVal) ? (Hit, Stand))
+          !standVal = fromJust $ M.lookup (s, Stick) (_qValues blackjack)
+      pure ((hitVal > standVal) ? (Hit, Stick))
                    
 --------------------------------------------------------------------------------
 -- policies: dealer will stand when sum >= 17; player is the one we try learning
@@ -124,7 +124,7 @@ getSumViaFixedPolicy standSum = foldl go (0, 0)
 nextCard :: IO Int
 nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
 
--- epsilon greedy, also random select Hit or Stand
+-- epsilon greedy, also random select Hit or Stick
 headOrTail :: Double -> IO Bool
 headOrTail eps = sample $ bernoulli eps
 

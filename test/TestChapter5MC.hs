@@ -15,19 +15,10 @@ import           Control.Monad.Trans.State
 
 import           Data.Configurator
 import           Data.Configurator.Types
-import           Data.List.Split (chunksOf)
-import           Data.Foldable (toList)
 
-import           Data.Random
-import           Data.Random.Distribution
-import           Data.Random.Distribution.Poisson
-
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import           Data.Text (Text)
+import qualified Data.Map.Strict as M
 
 import           Graphics.Matplotlib hiding (def)
-
 import           System.Console.AsciiProgress(Options(..), Stats(..),
                                               displayConsoleRegions, complete,
                                               getProgressStats, def, newProgressBar, tickN)
@@ -76,3 +67,6 @@ doBlackjackTest config = do
 -- action-state value is the 
 drawBlackjack :: Int -> Blackjack -> IO ()
 drawBlackjack totalEpisode blackjack = pure ()
+  let keys = M.keys (_qValues blackjack)
+      values = elems (_qValues blackjack)
+      
