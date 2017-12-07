@@ -40,7 +40,7 @@ testChapter5 :: FilePath -> IO ()
 testChapter5 configPath = do
   print "Chapter 5 Experiment Starting "
   (config, _) <- autoReload autoConfig [Required configPath]
-  doBlackjackTest
+  doBlackjackTest config
 
 ----------------------------------------------------------------------------------------------------
 -- Car Rental Test
@@ -56,17 +56,23 @@ doBlackjackTest config = do
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
                              }
-    blackjack' <- loop pg 0 episodes blackjack 
-    putStrLn "car rental experiment finish. Final Results: "
+    blackjack' <- loop pg 1 episodes blackjack
+    putStrLn "blackjack experiment finish. Final Results: "
+    putStrLn $ show blackjack'
+    drawBlackjack episodes blackjack' 
   threadDelay 100000
   where
   loop pg count totalEpisode blackjack 
     | count >= totalEpisode = complete pg >> pure blackjack
     | otherwise = do
-      blackjack' <- runStateT blackjackStep blackjack
+      blackjack' <- fst <$> runStateT (blackjackStep count) blackjack
       stat <- getProgressStats pg
       let ticked = fromInteger $ stCompleted stat
           percent = round $ fromIntegral count / fromIntegral totalEpisode
           willTick = percent - ticked
       tickN pg willTick
       loop pg (count + 1) totalEpisode blackjack'
+
+-- action-state value is the 
+drawBlackjack :: Int -> Blackjack -> IO ()
+drawBlackjack totalEpisode blackjack = pure ()

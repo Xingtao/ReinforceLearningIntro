@@ -9,7 +9,6 @@ module Chapter5MC
     ( Blackjack(..)
     , mkBlackjack
     , blackjackStep
-    , showBlackjackResult
     ) where
 
 import           Control.Monad
@@ -38,17 +37,14 @@ import           Utils
 -- | Monte Carlo Method Experiment: Blackjack
 --   Will implement: MonteCarlo-E-Soft(On-Policy), MonteCarlo-Off-Policy
 
-data Act = Hit | Stand deriving (Show)
+data Act = Hit | Stand deriving (Show, Ord, Eq)
 -- ((sum, dealer's one card, usable ace), act)
 type SAPair = ((Int, Int, Bool), Act)
 
--- epsilon-soft 
+-- epsilon-soft, reduce epsilon as episode increase
 data Blackjack = Blackjack {
      _epsilon :: Double 
-    ,_sa :: M SAPair Int
-    ,_qValues :: [Double]
-    ,_saReturns :: [Double]
-    ,_act :: [Act]
+    ,_qValues :: M.Map SAPair Double
     } deriving (Show)
 
 makeLenses ''Blackjack
@@ -57,38 +53,58 @@ mkBlackjack :: Double -> Blackjack
 mkBlackjack epsilon =
   let sas = [((s, d, bAce), a) | s <- [12..21], d <- [1..10],
                                  bAce <- [True, False], a <- [Hit, Stand]]
-      initQVals = take (length sas) (repeat 0.0)
-      initSAReturns = take (length sas) (repeat 0.0)
-  in  Blackjack epsilon (M.fromList $ zip sas [0..]) initQVals initSAReturns
+  in  Blackjack epsilon (M.fromList $ zip sas (repeat 0.0))
 
 --------------------------------------------------------------------------------
-blackjackStep :: StateT Blackjack IO Blackjack
-blackjackStep = get >>= oneEpisode >>= put
-      
-oneEpisode :: Blackjack -> StateT Blackjack IO Blackjack
-oneEpisode blackjack = do
-  dealerCards <- liftIO $ replicateM 21 nextCard
+blackjackStep :: Int -> StateT Blackjack IO Blackjack
+blackjackStep count = do
+  blackjack <- get
+  dealerCards <- liftIO $ replicateM 21 nextCard -- at most 21 cards
   playerCards <- liftIO $ replicateM 21 nextCard
   -- player first (explode first ...)  
-  let (dealerSum, _) = getSumViaFixedPolicy 17 dealerCards  
-  epsilonGreedyPlayOneEpisode blackjack playerCards (dealerSum, head dealerCards)
-  
-epsilonGreedyPlayOneEpisode :: Blackjack -> [Int] -> (Int, Int) -> StateT Blackjack IO Blackjack
-epsilonGreedyPlayOneEpisode blackjack playerCards (dealerSum, dealerFirstCard) = do
-  let qVals = _qValues blackjack
-        
+  let (dealerSum, _) = getSumViaFixedPolicy 17 dealerCards
+  trajectories <- liftIO $ generatePlayerTrajectory blackjack (head dealerCards) (0,0) playerCards
+  let (playerSum, _, _) = fst $ last trajectories
+      !reward | playerSum > dealerSum = 1.0
+              | playerSum == dealerSum = 0.0
+              | otherwise = negate 1.0
+      !trajectories' = filter (\ ((ps, _, _), _) -> ps >= 12 && ps <= 21) trajectories
+      !blackjack' = foldl (updateValues count reward) blackjack trajectories'
+  put blackjack'
+  pure blackjack'
+  where
+  updateValues count reward blackjack sa =
+    let oldValMap = _qValues blackjack
+    in  blackjack {_qValues = M.adjust (\v -> v + (1.0 / fromIntegral count) * (reward -v)) sa oldValMap}
 
-generateTrajectoryUsingEGreedy :: Blackjack -> playerCards -> 
+generatePlayerTrajectory :: Blackjack -> Int -> (Int, Int) -> [Int] -> IO [SAPair]
+generatePlayerTrajectory _ _ _ [] = pure []
+generatePlayerTrajectory blackjack dfc (playerSum, aceNum) (x:xs)
+  | playerSum < 11 && x == 1 = generatePlayerTrajectory blackjack dfc (playerSum + 11, aceNum + 1) xs
+  | playerSum < 11 = generatePlayerTrajectory blackjack dfc (playerSum + x, aceNum) xs
+  | playerSum == 11 && x == 1 = generatePlayerTrajectory blackjack dfc (12, aceNum) xs
+  | playerSum == 11 = generatePlayerTrajectory blackjack dfc (11 + x, aceNum) xs
+  | playerSum == 21 = pure [((21, dfc, useAce aceNum), Stand)]
+  | playerSum > 21 = if (aceNum > 0)
+                        then generatePlayerTrajectory blackjack dfc (playerSum - 10, aceNum - 1) xs
+                        else pure [((playerSum, dfc, False), Stand)]
+  | playerSum < 21 = do
+      a <- epsilonGreedyAct blackjack (playerSum, dfc, useAce aceNum)
+      case a of
+        Stand -> pure [((playerSum, dfc, useAce aceNum), Stand)]
+        Hit -> (((playerSum, dfc, useAce aceNum), Hit) :) <$>
+                 generatePlayerTrajectory blackjack dfc (playerSum + x, aceNum) xs
 
-  -- ((sum, dealer's one card, usable ace), hit/stand)
-  type SAPair = ((Int, Int, Bool), Bool) 
-  data Blackjack = Blackjack {
-     _epsilon :: Double 
-    ,_sa :: M SAPair Int
-    ,_qValues :: [Double]
-    } deriving (Show)
-
-
+epsilonGreedyAct :: Blackjack -> (Int, Int, Bool) -> IO Act
+epsilonGreedyAct blackjack s = do
+  bExplore <- headOrTail (_epsilon blackjack) -- head means explore
+  case bExplore of
+    True -> headOrTail 0.5 >>= \ bHit -> pure (bHit ? (Hit, Stand)) -- head means hit
+    False -> do
+      let !hitVal = fromJust $ M.lookup (s, Hit) (_qValues blackjack)
+          !standVal = fromJust $ M.lookup (s, Stand) (_qValues blackjack)
+      pure ((hitVal > standVal) ? (Hit, Stand))
+                   
 --------------------------------------------------------------------------------
 -- policies: dealer will stand when sum >= 17; player is the one we try learning
 
@@ -111,3 +127,6 @@ nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
 -- epsilon greedy, also random select Hit or Stand
 headOrTail :: Double -> IO Bool
 headOrTail eps = sample $ bernoulli eps
+
+useAce :: Int -> Bool
+useAce num = (num > 0) ? (True, False)
