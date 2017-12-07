@@ -38,11 +38,11 @@ testChapter5 configPath = do
 doBlackjackTest :: Config -> IO () 
 doBlackjackTest config = do
   (episodes::Int) <- require config "blackjack.episodes"
-  (epsilonGreedy::Double) <- require config "blackjack.epsilon"
-  let !blackjack = mkBlackjack epsilonGreedy                               
+  (startEpsilon::Double) <- require config "blackjack.startEpsilon"
+  let !blackjack = mkBlackjack startEpsilon                               
   -- do experiments
   displayConsoleRegions $ do
-    putStrLn "Will do blackjack experiment " >> putStrLn (show blackjack)
+    putStrLn "Will do blackjack experiment "
     pg <- newProgressBar def { pgWidth = 80
                              , pgTotal = 100
                              , pgOnCompletion = Just "Done :percent after :elapsed seconds"
@@ -62,11 +62,19 @@ doBlackjackTest config = do
           percent = round $ fromIntegral count / fromIntegral totalEpisode
           willTick = percent - ticked
       tickN pg willTick
-      loop pg (count + 1) totalEpisode blackjack'
+      let newEpsilon = 1.0 / (fromIntegral (count + 1))
+          newEpsilon' = (newEpsilon < (_epsilon blackjack)) ? (newEpsilon, (_epsilon blackjack))
+      loop pg (count + 1) totalEpisode (blackjack' {_epsilon = newEpsilon'})
 
 -- action-state value is the 
 drawBlackjack :: Int -> Blackjack -> IO ()
-drawBlackjack totalEpisode blackjack = pure ()
-  let keys = M.keys (_qValues blackjack)
-      values = elems (_qValues blackjack)
-      
+drawBlackjack totalEpisode blackjack = do
+  let (hitMap, stickMap) = M.partitionWithKey (\ (_, a) _ -> a == Hit) (_qValues blackjack)
+      (hitMap', stickMap') = (M.mapKeys (\ (s, _) -> s) hitMap, M.mapKeys (\ (s, _) -> s) stickMap)
+      !result = M.mergeWithKey (\ _ v1 v2 -> Just ((v1 > v2) ? (Hit, Stick)))
+                               (M.mapMaybe (\ _ -> Just Hit))
+                               (M.mapMaybe (\ _ -> Just Stick)) hitMap' stickMap'
+      (!aceResult, !noAceResult) = M.partitionWithKey (\ (_, _, bAce) _ -> bAce == True) result
+  putStrLn "The Results: "
+  print aceResult
+  print noAceResult

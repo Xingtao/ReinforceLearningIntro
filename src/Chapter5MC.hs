@@ -7,6 +7,7 @@
 
 module Chapter5MC
     ( Blackjack(..)
+    , Act(..)
     , mkBlackjack
     , blackjackStep
     ) where
@@ -80,7 +81,7 @@ blackjackStep count = do
 generatePlayerTrajectory :: Blackjack -> Int -> (Int, Int) -> [Int] -> IO [SAPair]
 generatePlayerTrajectory _ _ _ [] = pure []
 generatePlayerTrajectory blackjack dfc (playerSum, aceNum) (x:xs)
-  | playerSum < 11 && x == 1 = generatePlayerTrajectory blackjack dfc (playerSum + 11, aceNum + 1) xs
+  | playerSum < 11 && x == 1 = generatePlayerTrajectory blackjack dfc (playerSum + 11, aceNum+ 1) xs
   | playerSum < 11 = generatePlayerTrajectory blackjack dfc (playerSum + x, aceNum) xs
   | playerSum == 11 && x == 1 = generatePlayerTrajectory blackjack dfc (12, aceNum) xs
   | playerSum == 11 = generatePlayerTrajectory blackjack dfc (11 + x, aceNum) xs
