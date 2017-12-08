@@ -66,7 +66,8 @@ blackjackStep count = do
   let (dealerSum, _) = getSumViaFixedPolicy 17 dealerCards
   trajectories <- liftIO $ generatePlayerTrajectory blackjack (head dealerCards) (0,0) playerCards
   let (playerSum, _, _) = fst $ last trajectories
-      !reward | playerSum > dealerSum = 1.0
+      !reward | playerSum < 0 = negate 1.0
+              | playerSum > dealerSum = 1.0
               | playerSum == dealerSum = 0.0
               | otherwise = negate 1.0
       !trajectories' = filter (\ ((ps, _, _), _) -> ps >= 12 && ps <= 21) trajectories
@@ -82,13 +83,11 @@ generatePlayerTrajectory :: Blackjack -> Int -> (Int, Int) -> [Int] -> IO [SAPai
 generatePlayerTrajectory _ _ _ [] = pure []
 generatePlayerTrajectory blackjack dfc (playerSum, aceNum) (x:xs)
   | playerSum < 11 && x == 1 = generatePlayerTrajectory blackjack dfc (playerSum + 11, aceNum+ 1) xs
-  | playerSum < 11 = generatePlayerTrajectory blackjack dfc (playerSum + x, aceNum) xs
-  | playerSum == 11 && x == 1 = generatePlayerTrajectory blackjack dfc (12, aceNum) xs
-  | playerSum == 11 = generatePlayerTrajectory blackjack dfc (11 + x, aceNum) xs
+  | playerSum <= 11 = generatePlayerTrajectory blackjack dfc (playerSum + x, aceNum) xs
   | playerSum == 21 = pure [((21, dfc, useAce aceNum), Stick)]
   | playerSum > 21 = if (aceNum > 0)
-                        then generatePlayerTrajectory blackjack dfc (playerSum - 10, aceNum - 1) xs
-                        else pure [((playerSum, dfc, False), Stick)]
+                        then generatePlayerTrajectory blackjack dfc (playerSum - 10, aceNum - 1) (x:xs)
+                        else pure [((negate 1, dfc, False), Stick)] -- blow up
   | playerSum < 21 = do
       a <- epsilonGreedyAct blackjack (playerSum, dfc, useAce aceNum)
       case a of
@@ -105,17 +104,18 @@ epsilonGreedyAct blackjack s = do
       let !hitVal = fromJust $ M.lookup (s, Hit) (_qValues blackjack)
           !standVal = fromJust $ M.lookup (s, Stick) (_qValues blackjack)
       pure ((hitVal > standVal) ? (Hit, Stick))
-                   
+                       
 --------------------------------------------------------------------------------
--- policies: dealer will stand when sum >= 17; player is the one we try learning
-
+-- dealer policy: will stick when sum >= 17
 getSumViaFixedPolicy :: Int -> [Int] -> (Int, Int)
 getSumViaFixedPolicy standSum = foldl go (0, 0)
   where
-  go (acc, aceAs11Num) card | acc >= standSum = (acc, aceAs11Num)
+  go (acc, aceAs11Num) card | acc < 0 = (acc, aceAs11Num) -- already blow up
+                            | acc >= standSum = (acc, aceAs11Num) -- it is ok, just stick
                             | card == 1 && acc + 11 <= 21 = (acc + 11, aceAs11Num + 1)
                             | card == 1 && acc + 11 > 21 = (acc + 1, aceAs11Num)
                             | acc + card > 21 && aceAs11Num > 0 = (acc + card - 10, aceAs11Num - 1)
+                            | acc + card > 21 = (negate 1, aceAs11Num) -- blow up
                             | otherwise = (acc + card, aceAs11Num)
 
 --------------------------------------------------------------------------------
