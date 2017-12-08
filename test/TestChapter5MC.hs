@@ -16,6 +16,7 @@ import           Control.Monad.Trans.State
 import           Data.Configurator
 import           Data.Configurator.Types
 
+import           Data.Maybe(fromJust)
 import qualified Data.Map.Strict as M
 
 import           Graphics.Matplotlib hiding (def)
@@ -34,12 +35,12 @@ testChapter5 configPath = do
   doBlackjackTest config
 
 ----------------------------------------------------------------------------------------------------
--- Car Rental Test
+-- Blackjack Test
 doBlackjackTest :: Config -> IO () 
 doBlackjackTest config = do
   (episodes::Int) <- require config "blackjack.episodes"
-  (startEpsilon::Double) <- require config "blackjack.startEpsilon"
-  let !blackjack = mkBlackjack startEpsilon                               
+  (ss::Double) <- require config "blackjack.stepSize"
+  let !blackjack = mkBlackjack ss                               
   -- do experiments
   displayConsoleRegions $ do
     putStrLn "Will do blackjack experiment "
@@ -59,22 +60,35 @@ doBlackjackTest config = do
       blackjack' <- fst <$> runStateT (blackjackStep count) blackjack
       stat <- getProgressStats pg
       let ticked = fromInteger $ stCompleted stat
-          percent = round $ fromIntegral count / fromIntegral totalEpisode
+          percent = round $ (fromIntegral count) / (fromIntegral totalEpisode)
           willTick = percent - ticked
       tickN pg willTick
-      let newEpsilon = 1.0 / (fromIntegral (count + 1))
-          newEpsilon' = (newEpsilon < (_epsilon blackjack)) ? (newEpsilon, (_epsilon blackjack))
-      loop pg (count + 1) totalEpisode (blackjack' {_epsilon = newEpsilon'})
+      loop pg (count + 1) totalEpisode blackjack'
 
 -- action-state value is the 
 drawBlackjack :: Int -> Blackjack -> IO ()
 drawBlackjack totalEpisode blackjack = do
   let (hitMap, stickMap) = M.partitionWithKey (\ (_, a) _ -> a == Hit) (_qValues blackjack)
       (hitMap', stickMap') = (M.mapKeys (\ (s, _) -> s) hitMap, M.mapKeys (\ (s, _) -> s) stickMap)
-      !result = M.mergeWithKey (\ _ v1 v2 -> Just ((v1 > v2) ? (Hit, Stick)))
+      !result = M.mergeWithKey (\ _ (_,v1) (_,v2) -> Just ((v1 > v2) ? (Hit, Stick)))
                                (M.mapMaybe (\ _ -> Just Hit))
                                (M.mapMaybe (\ _ -> Just Stick)) hitMap' stickMap'
       (!aceResult, !noAceResult) = M.partitionWithKey (\ (_, _, bAce) _ -> bAce == True) result
   putStrLn "The Results: "
-  print aceResult
-  print noAceResult
+  putStrLn $ prettyPrint aceResult True
+  putStrLn $ prettyPrint noAceResult False
+
+prettyPrint :: M.Map (Int, Int, Bool) Act -> Bool -> String
+prettyPrint result bUseAce = 
+  let useIt = bUseAce ? ("Usable Ace: \n", "No Usable Ace: \n")
+      header = "|p/d" ++ (concat $ zipWith (\ a b -> a ++ show b) (repeat "|") [1..10]) ++ "|\n"     
+      alignHeader = (concat . take 11 $ repeat "|:-----:") ++ "|\n"      
+  in  useIt ++ header ++ alignHeader ++ (concat $ map showRows [12..21])
+  where
+  showRows playerSum =
+    let title = "|" ++ show playerSum ++ "|"
+        cells = concat $ map (fillCell playerSum) [1..10]
+    in  title ++ cells ++ "\n"
+  fillCell playerSum dealerCard =
+    let actStr = show . fromJust $ M.lookup (playerSum, dealerCard, bUseAce) result
+    in  actStr ++ "|"
