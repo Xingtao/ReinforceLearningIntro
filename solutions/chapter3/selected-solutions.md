@@ -41,6 +41,13 @@
 `Exercise 3.11`
 > ![alt text](figures/exercise_3-11.png "Exercise 3.11")
 
+`Exercise 3.13`
+> ![alt text](figures/exercise_3-13.png "Exercise 3.13")
+
+
+`Exercise 3.14`
+> ![alt text](figures/exercise_3-14.png "Exercise 3.14")
+
 ---
 
 ## Experiments Results For Chapter 3
