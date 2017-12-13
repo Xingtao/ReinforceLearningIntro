@@ -22,6 +22,25 @@
 `Exercise 3.6`
 > ![alt text](figures/exercise_3-6.png "Exercise 3.6")
 
+`Exercise 3.7`
+> The return at each time step is still (-1 * gamma ^ K).
+> For episodic pole-balance, 'K' will be reset to 0 after each failure, where continuing task won't but increase whatever.
+
+`Exercise 3.9`
+> G5 = 0
+> G4 = R5 + 0.5*G5 = 2
+> G3 = R4 + 0.5*G4 = 3 + 1 = 4
+> G2 = R3 + 0.5*G3 = 6 + 2 = 8
+> G1 = R2 + 0.5*G2 = 2 + 4 = 6
+> G0 = R1 + 0.5*G1 = -1 + 3 = 2
+
+`Exercise 3.10`
+> G1 = 7 / (1-0.9) = 70
+> G0 = R1 + 0.9*G1 = 2 + 63 = 65
+
+`Exercise 3.11`
+> ![alt text](figures/exercise_3-11.png "Exercise 3.11")
+
 ---
 
 ## Experiments Results For Chapter 3
