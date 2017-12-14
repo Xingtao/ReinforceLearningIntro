@@ -69,7 +69,7 @@
     &= \mathbb{E}[\sum_{k=0}^{\infty}\gamma^kR_{t+k+1} | S_{t}=s, A_{t}=a]\\
     &= \mathbb{E}[R_{t+1} + \gamma \sum_{k=0}^{\infty}\gamma^kR_{t+k+2} | S_{t}=s, A_{t}=a]\\
     &= \mathbb{E}[R_{t+1} + \gamma G_{t+1} | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \mathbb{E}[\gamma G_{t+1} | S_{t+1}=s']]\\
+    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \mathbb{E}[ G_{t+1} | S_{t+1}=s']]\\
     &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_\pi(s')]\\
     &= \sum_{s',r}p(s',r|s,a)[r + \gamma (\sum_{a'}\pi(a'|s') q_{\pi}(s',a'))]
   \end{aligned}
@@ -82,9 +82,65 @@
     Then \ \ v_{\pi}^c(s) &= \mathbb{E}[G_t^c | S_{t}=s]\\
     &= \mathbb{E}[\sum_{k=0}^{\infty}\gamma^k(R_{t+k+1} + c) | S_{t}=s]\\
     &= \mathbb{E}[\sum_{k=0}^{\infty}\gamma^k(R_{t+k+1} + \sum_{k=0}^{\infty}\gamma^kc) | S_{t}=s]\\
-    &= v_{\pi}(s) + \sum_{k=0}^{\infty}\gamma^kc
+    &= v_{\pi}(s) + \sum_{k=0}^{\infty}\gamma^kc\\
+    &= v_{\pi}(s) + \frac {c} {1-\gamma}
   \end{aligned}
 \]
+
+% Exercise 3.15
+\[
+  \begin{aligned}
+    Given \ G_t = &\sum_{k=0}^{T}\gamma^kR_{t+k+1}, and, \ G_t^c = \sum_{k=0}^{T}\gamma^k(R_{t+k+1} + c)\\
+    Then \ \ v_{\pi}^c(s) &= \mathbb{E}[G_t^c | S_{t}=s]\\
+    &= \mathbb{E}[\sum_{k=0}^{T}\gamma^k(R_{t+k+1} + c) | S_{t}=s]\\
+    &= \mathbb{E}[\sum_{k=0}^{T}\gamma^k(R_{t+k+1} + \sum_{k=0}^{T}\gamma^kc) | S_{t}=s]\\
+    &= v_{\pi}(s) + \sum_{k=0}^{T}\gamma^kc\\
+    &= v_{\pi}(s) + c\frac {1 - \gamma^{T+1}} {1-\gamma}\\
+    c\frac {1 - \gamma^{T+1}} {1-\gamma}, &\ increase \ earlier \ appeared \ states \ with \ higher \ values.
+  \end{aligned}
+\]
+
+% Exercise 3.16
+\[
+  \begin{aligned}
+    v_{\pi}(s) &= \mathbb{E}_{\pi} [Gt | S_t = s]\\
+    &= \mathbb{E}_{\pi} [ \mathbb{E}_{\pi}[ Gt | S_t=s, A_t = a] | S_t=s] \ (law \ of \ iterated \ expectation) \\
+    &= \mathbb{E}_{\pi} [ q_{\pi}(s, \pi(s)) | S_{t}=s]\\
+    &= \sum_{a}\pi(a|s) p_{\pi}(s, a)
+  \end{aligned}
+\]
+
+% Exercise 3.17
+\[
+  \begin{aligned}
+    q_{\pi}(s) &= \mathbb{E}[ Gt | S_t=s, A_t = a]\\
+    &= \mathbb{E} [ R_{t=1} + \gamma G_{t+1} | S_t=s, A_t = a] \\
+    &= \mathbb{E} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E} [ \gamma G_{t+1} | S_t=s, A_t = a] \\
+    &= \mathbb{E} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E} [ \mathbb{E} [\gamma G_{t+1} | S_t=s, A_t = a, S_{t+1} = s'] | S_t=s, A_t = a] \\
+    &= \mathbb{E} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E} [\gamma v(S_{t+1}) | S_t=s, A_t = a] \\
+    &= \sum_{s', r} p(s',r|s,a) [r + \gamma v(s')]
+  \end{aligned}
+\]
+
+%  Exercise 3.22
+\[
+  \begin{aligned}
+    \gamma &= 0, \ v_{\pi_{Left}}^{top} = 1 + 0 * v^{left} = 1, \ \ v_{\pi_{Right}}^{top} = 0 + 0 * v^{right} = 0; \\
+    \gamma &= 0.9, \ v_{\pi_{Left}}^{top} = 1 + 0.9 * v^{left} = 1, \ \ v_{\pi_{Right}}^{top} = 0 + 0.9 * v^{right} = 1.8; \\
+    \gamma &= 0.5, \ v_{\pi_{Left}}^{top} = 1 + 0.5 * v^{left} = 1, \ \ v_{\pi_{Right}}^{top} = 0 + 0.5 * v^{right} = 1;
+  \end{aligned}
+\]
+
+%  Exercise 3.23, 24, 25, 26
+\[
+  \begin{aligned}
+    &v_*(s) &&= \max_a (q_*(s, a)) \ \ &exercise3.23 \\
+    &q_*(s,a) &&= \sum_{s',r} p(s',r|s,a)[r + \gamma v_*(s')] \ \ &exercise3.24 \\
+    &\pi_*(s) &&= \arg\max_a (q_*(s, a))  \ \ &exercise3.25 \\
+    &\pi_*(s) &&= \arg\max_a (\sum_{s',r} p(s',r|s,a)[r + \gamma v_*(s')])  \ \ &exercise3.26
+  \end{aligned}
+\]
+
 
 % Bellman Equation & Bellman Optimality Equation: value function & action-value function
 \[

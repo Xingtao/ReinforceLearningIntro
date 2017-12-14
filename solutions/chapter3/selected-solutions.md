@@ -48,6 +48,22 @@
 `Exercise 3.14`
 > ![alt text](figures/exercise_3-14.png "Exercise 3.14")
 
+`Exercise 3.16`
+> ![alt text](figures/exercise_3-16.png "Exercise 3.16")
+
+`Exercise 3.17`
+> ![alt text](figures/exercise_3-17.png "Exercise 3.17")
+
+`Exercise 3.21`
+> v*(A) = 10 + v*(A') = 10 + 0.9*(0 + 0.9 v*(1, 3)) = .... = 10 + 0.9^5 v*(A)    
+> v*(A) = 10 / (1 - 0.9^5)
+
+`Exercise 3.22`
+> ![alt text](figures/exercise_3-22.png "Exercise 3.22")
+
+`Exercise 3.23,24,25,26`
+> ![alt text](figures/exercise_3-23-26.png "Exercise 3.23-26")
+
 ---
 
 ## Experiments Results For Chapter 3
