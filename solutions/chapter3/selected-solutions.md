@@ -1,7 +1,7 @@
 ## Selected Reference Solution For Chapter 3
 
 `Exercise 3.4`
-> ![alt text](figures/exercise_3-4.png "Exercise 3.4")
+> ![](figures/exercise_3-4.png "Exercise 3.4")
 
 `Exercise 3.5`
 
@@ -20,7 +20,7 @@
  |low  |recharge|low  |r_rechar | 0        |
 
 `Exercise 3.6`
-> ![alt text](figures/exercise_3-6.png "Exercise 3.6")
+> ![](figures/exercise_3-6.png "Exercise 3.6")
 
 `Exercise 3.7`
 > The return at each time step is still (-1 * gamma ^ K).
@@ -39,30 +39,30 @@
 > G0 = R1 + 0.9*G1 = 2 + 63 = 65    
 
 `Exercise 3.11`
-> ![alt text](figures/exercise_3-11.png "Exercise 3.11")
+> ![](figures/exercise_3-11.png "Exercise 3.11")
 
 `Exercise 3.13`
-> ![alt text](figures/exercise_3-13.png "Exercise 3.13")
+> ![](figures/exercise_3-13.png "Exercise 3.13")
 
 
 `Exercise 3.14`
-> ![alt text](figures/exercise_3-14.png "Exercise 3.14")
+> ![](figures/exercise_3-14.png "Exercise 3.14")
 
 `Exercise 3.16`
-> ![alt text](figures/exercise_3-16.png "Exercise 3.16")
+> ![](figures/exercise_3-16.png "Exercise 3.16")
 
 `Exercise 3.17`
-> ![alt text](figures/exercise_3-17.png "Exercise 3.17")
+> ![](figures/exercise_3-17.png "Exercise 3.17")
 
 `Exercise 3.21`
 > v*(A) = 10 + v*(A') = 10 + 0.9*(0 + 0.9 v*(1, 3)) = .... = 10 + 0.9^5 v*(A)    
 > v*(A) = 10 / (1 - 0.9^5)
 
 `Exercise 3.22`
-> ![alt text](figures/exercise_3-22.png "Exercise 3.22")
+> ![](figures/exercise_3-22.png "Exercise 3.22")
 
 `Exercise 3.23,24,25,26`
-> ![alt text](figures/exercise_3-23-26.png "Exercise 3.23-26")
+> ![](figures/exercise_3-23-26.png "Exercise 3.23-26")
 
 ---
 

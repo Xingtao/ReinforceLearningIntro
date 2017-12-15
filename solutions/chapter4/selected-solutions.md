@@ -1,7 +1,7 @@
 ## Selected Reference Solution For Chapter 4
 
 `Exercise 4.1`
-> ![alt text](figures/4-1.png "Exercise 4.1")
+> ![](figures/exercise_4-1.png "Exercise 4.1")
 
 `Exercise 4.2`
 > As long as the dynamics of original states unchanged, the new added state 15 won't affect their state values.    
@@ -9,13 +9,17 @@
 > When state 13 can transite to 15, all state values need be re-calculated by policy evaluation.
 
 `Exercise 4.3`
-> ![alt text](figures/4-3.png "Exercise 4.3")
+> ![](figures/exercise_4-3.png "Exercise 4.3")
 
 `Exercise 4.4`
-> ![alt text](figures/4-4.png "Exercise 4.4")
+> ![](figures/exercise_4-4.png "Exercise 4.4")
 
 `Exercise 4.6`
-> ![alt text](figures/4-6.png "Exercise 4.6")
+> ![](figures/exercise_4-6.png "Exercise 4.6")
+
+`Exercise 4.8`
+> ![](figures/exercise_4-8.png "Exercise 4.8")
+
 
 
 ---
