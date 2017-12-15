@@ -1,13 +1,28 @@
 ## Selected Reference Solution For Chapter 4
 
 `Exercise 4.1`
-![alt text](figures/4-1.png "Exercise 4.1")
+> ![alt text](figures/4-1.png "Exercise 4.1")
+
+`Exercise 4.2`
+> As long as the dynamics of original states unchanged, the new added state 15 won't affect their state values.    
+> The sate value of v(15) can be easily cacludated by Bellman equation.
+> When state 13 can transite to 15, all state values need be re-calculated by policy evaluation.
+
+`Exercise 4.3`
+> ![alt text](figures/4-3.png "Exercise 4.3")
+
+`Exercise 4.4`
+> ![alt text](figures/4-4.png "Exercise 4.4")
+
+`Exercise 4.6`
+> ![alt text](figures/4-6.png "Exercise 4.6")
+
 
 ---
 
 ## Experiments Results For Chapter 4
 
-### 1. Car Rental 
+### 1. Car Rental
 
 __Car Rental__
 ![alt text](figures/figure_4-2.png "Car Rental Using Policy Iteration")

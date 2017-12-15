@@ -96,7 +96,7 @@
     &= \mathbb{E}[\sum_{k=0}^{T}\gamma^k(R_{t+k+1} + \sum_{k=0}^{T}\gamma^kc) | S_{t}=s]\\
     &= v_{\pi}(s) + \sum_{k=0}^{T}\gamma^kc\\
     &= v_{\pi}(s) + c\frac {1 - \gamma^{T+1}} {1-\gamma}\\
-    c\frac {1 - \gamma^{T+1}} {1-\gamma}, &\ increase \ earlier \ appeared \ states \ with \ higher \ values.
+    c\frac {1 - \gamma^{T+1}} {1-\gamma}, &\text{ increase earlier traversed states with higher values }
   \end{aligned}
 \]
 
@@ -104,7 +104,7 @@
 \[
   \begin{aligned}
     v_{\pi}(s) &= \mathbb{E}_{\pi} [Gt | S_t = s]\\
-    &= \mathbb{E}_{\pi} [ \mathbb{E}_{\pi}[ Gt | S_t=s, A_t = a] | S_t=s] \ (law \ of \ iterated \ expectation) \\
+    &= \mathbb{E}_{\pi} [ \mathbb{E}_{\pi}[ Gt | S_t=s, A_t = a] | S_t=s] \text{ (the law of iterated expectation)} \\
     &= \mathbb{E}_{\pi} [ q_{\pi}(s, \pi(s)) | S_{t}=s]\\
     &= \sum_{a}\pi(a|s) p_{\pi}(s, a)
   \end{aligned}
@@ -114,10 +114,10 @@
 \[
   \begin{aligned}
     q_{\pi}(s) &= \mathbb{E}[ Gt | S_t=s, A_t = a]\\
-    &= \mathbb{E} [ R_{t=1} + \gamma G_{t+1} | S_t=s, A_t = a] \\
-    &= \mathbb{E} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E} [ \gamma G_{t+1} | S_t=s, A_t = a] \\
-    &= \mathbb{E} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E} [ \mathbb{E} [\gamma G_{t+1} | S_t=s, A_t = a, S_{t+1} = s'] | S_t=s, A_t = a] \\
-    &= \mathbb{E} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E} [\gamma v(S_{t+1}) | S_t=s, A_t = a] \\
+    &= \mathbb{E}_{\pi} [ R_{t=1} + \gamma G_{t+1} | S_t=s, A_t = a] \\
+    &= \mathbb{E}_{\pi} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E}_{\pi} [ \gamma G_{t+1} | S_t=s, A_t = a] \\
+    &= \mathbb{E}_{\pi} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E}_{\pi} [ \mathbb{E}_{\pi} [\gamma G_{t+1} | S_t=s, A_t = a, S_{t+1} = s'] | S_t=s, A_t = a] \\
+    &= \mathbb{E}_{\pi} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E}_{\pi} [\gamma v_{\pi}(S_{t+1}) | S_t=s, A_t = a] \\
     &= \sum_{s', r} p(s',r|s,a) [r + \gamma v(s')]
   \end{aligned}
 \]
@@ -142,6 +142,51 @@
 \]
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Chapter 4
+
+%  Exercise 4.1
+\[
+  \begin{aligned}
+    For \ q_{\pi}(s,a) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
+    &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(S_{t+1})]\\
+    \\
+    So \ q_{\pi}(11,down) &= \sum_{s',r}p(s',r|11,down)[r + \gamma v_{\pi}(s')], \ (s'=termination, r=-1, \gamma = 1) \\
+    &= r + 1*v_{\pi}(S_{t+1}) = -1 + 0 = -1 \\
+    \\
+    q_{\pi}(7,down) &= \sum_{s',r}p(s',r|7,down)[r + \gamma v_{\pi}(s')], \  for \  s'=11, r=-1, \gamma = 1\\
+    &= r + 1*v_{\pi}(11) \\
+    &= -1 + 0.25q_{\pi}(11,up) + 0.25q_{\pi}(11,left) + 0.25q_{\pi}(11,right) + 0.25q_{\pi}(11,down)\\
+    &\text{after enough runs, those values will converge}
+  \end{aligned}
+\]
+
+% Exercise 4.3
+\[
+  \begin{aligned}
+    q_{\pi}(s,a) &= \mathbb{E}_{\pi}[ Gt | S_{t}=s, A_{t}=a]\\
+    &= \mathbb{E}_{\pi}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
+    &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(s')]\\
+    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{\pi}(s',a')]\\
+    \\So \ \ &
+    q_{k+1}(s, a) &= \mathbb{E}_{\pi}[R_{t+1} + \gamma v_{k}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
+    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{k}(s',a')]
+  \end{aligned}
+\]
+
+% Exercise 4.6
+\[
+  \begin{aligned}
+    1. \ & Initialization\\
+    & q(s, a) \in \mathbb{R}, \\
+    2. \ & Policy \ Evaluation\\
+    3. \ & Policy \ Improvement\\
+    policy-stable <-
+  \end{aligned}
+\]
+
+
+
 % Bellman Equation & Bellman Optimality Equation: value function & action-value function
 \[
   \begin{aligned}
@@ -157,32 +202,6 @@
   \\
   q_{*}(s,a) &= \mathbb{E}[R_{t+1} + \gamma \max_{a'}q_{*}(S_{t+1}, a') | S_{t}=s, A_{t}=a]\\
   &= \sum_{s',r}p(s',r|s,a)[r + \gamma \max_{a'}q_{*}(s', a')]
-  \end{aligned}
-\]
-
-% Chapter 4 Exercise Math Equations
-% 4.1
-\[
-  \begin{aligned}
-    \because q_{\pi}(s,a) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(S_{t+1})]\\
-    \\
-    \therefore q_{\pi}(11,down) &= \sum_{s',r}p(s',r|11,down)[r + \gamma v_{\pi}(s')], \  for \  s'=termination, r=-1, \gamma = 1\\
-    &= r + v_{\pi}(S_{t+1}) = -1 + 0 = -1 \\
-    \therefore q_{\pi}(7,down) &= \sum_{s',r}p(s',r|7,down)[r + \gamma v_{\pi}(s')], \  for \  s'=11, r=-1, \gamma = 1\\
-    &= r + v_{\pi}(11) \\
-    &= -1 + 0.25q_{\pi}(11,up) + 0.25q_{\pi}(11,left) + 0.25q_{\pi}(11,right) + 0.25q_{\pi}(11,down)\\
-  \end{aligned}
-\]
-
-% 4.3
-\[
-  \begin{aligned}
-    q_{\pi}(s,a) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(s')]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{\pi}(s',a')]\\
-    q_{k+1}(s, a) &= \mathbb{E}[R_{t+1} + \gamma v_{k}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{k}(s',a')]
   \end{aligned}
 \]
 
