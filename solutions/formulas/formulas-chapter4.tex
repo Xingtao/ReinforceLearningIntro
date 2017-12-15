@@ -1,146 +1,7 @@
 % Formulas for your convinence
-
 \documentclass{article}
 \usepackage{latexsym,bm,amsmath,amssymb}
 \begin{document}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Chapter 2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Exercise 2.1
-\[
-  \begin{aligned}
-    p_{Greedy} = (1 - \varepsilon) + \varepsilon * 1/2 = 0.75
-  \end{aligned}
-\]
-
-% Exercise 2.3
-\[
-  \begin{aligned}
-    \lim\limits_{step\to+\infty} (p_{\varepsilon=0.1}^{best \ action}) &= 1 - \varepsilon + 1/10 * \varepsilon = 0.91 \\
-    \lim\limits_{step\to+\infty} (p_{\varepsilon=0.01}^{best \ action}) &= 1 - \varepsilon + 1/10 * \varepsilon = 0.991
-  \end{aligned}
-\]
-
-% Exercise 2.5
-\[
-  \begin{aligned}
-    Q_{n+1} &= Q_{n} + \alpha_n (R_n - Q_n) = (1 - \alpha_n(a))Q_n + \alpha_n(a)R_n \\
-            &= (1 - \alpha_n(a))((1 - \alpha_{n-1}(a))Q_{n-1} + \alpha_{n-1}(a)R_{n-1}) + \alpha_n(a)R_n\\
-            & \quad \vdots\\
-            &= (1 - \alpha_n(a))\cdots(1-\alpha_1(a))Q_1 + \\
-            & \qquad \qquad (1 - \alpha_n(a))\cdots(1-\alpha_2(a))\alpha_1(a)R_1 + \\
-            & \qquad \qquad \ddots\\
-            & \qquad \qquad (1 - \alpha_n(a))\alpha_{n-1}(a)R_{n-1} + \alpha_n(a)R_n \\
-            &= Q_1\prod^n_{i=1}(1 - \alpha_i(a)) + \sum^n_{i=1} (\alpha_iR_i \prod^n_{j=i+1}(1-\alpha_j))
-  \end{aligned}
-\]
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Chapter 3
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Exercise 3.4
-\[
-  \begin{aligned}
-  r_{t+1} = \mathbb{E}[R_{t+1} | S_t = s] = \sum_{a\in \mathcal{A}(s)}\pi(a|s) \sum_{r\in\mathcal{R}} r \sum_{s'\in\mathcal{S}}p(s',r|s,a)\\
-  \end{aligned}
-\]
-
-% Exercise 3.6
-\[
-  \begin{aligned}
-  \sum_{s' \in \mathcal{S^+},r \in \mathcal{R}} p(s',r|s,a) = 1, \ for \ all \ s \in \mathcal{S^+}, \ a \in A(s)
-  \end{aligned}
-\]
-
-% Exercise 3.11
-\[
-  \begin{aligned}
-  &Given \ G_t = \sum_{k=0}^{\infty} \gamma^k, \ then \ \gamma G_t = \sum_{k=1}^{\infty} \gamma^k\\
-  &G_t - \gamma G_t = \sum_{k=0}^{\infty} \gamma^k - \sum_{k=1}^{\infty} \gamma^k = \gamma^0 = 1\\
-  &G_t = \frac {1} {(1 - \gamma)}
-  \end{aligned}
-\]
-
-% Exercise 3.13
-\[
-  \begin{aligned}
-    q_{\pi}(s,a) &= \mathbb{E}[G_t| S_{t}=s, A_{t}=a]\\
-    &= \mathbb{E}[\sum_{k=0}^{\infty}\gamma^kR_{t+k+1} | S_{t}=s, A_{t}=a]\\
-    &= \mathbb{E}[R_{t+1} + \gamma \sum_{k=0}^{\infty}\gamma^kR_{t+k+2} | S_{t}=s, A_{t}=a]\\
-    &= \mathbb{E}[R_{t+1} + \gamma G_{t+1} | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \mathbb{E}[ G_{t+1} | S_{t+1}=s']]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_\pi(s')]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma (\sum_{a'}\pi(a'|s') q_{\pi}(s',a'))]
-  \end{aligned}
-\]
-
-% Exercise 3.14
-\[
-  \begin{aligned}
-    Given \ G_t = &\sum_{k=0}^{\infty}\gamma^kR_{t+k+1}, and, \ G_t^c = \sum_{k=0}^{\infty}\gamma^k(R_{t+k+1} + c)\\
-    Then \ \ v_{\pi}^c(s) &= \mathbb{E}[G_t^c | S_{t}=s]\\
-    &= \mathbb{E}[\sum_{k=0}^{\infty}\gamma^k(R_{t+k+1} + c) | S_{t}=s]\\
-    &= \mathbb{E}[\sum_{k=0}^{\infty}\gamma^k(R_{t+k+1} + \sum_{k=0}^{\infty}\gamma^kc) | S_{t}=s]\\
-    &= v_{\pi}(s) + \sum_{k=0}^{\infty}\gamma^kc\\
-    &= v_{\pi}(s) + \frac {c} {1-\gamma}
-  \end{aligned}
-\]
-
-% Exercise 3.15
-\[
-  \begin{aligned}
-    Given \ G_t = &\sum_{k=0}^{T}\gamma^kR_{t+k+1}, and, \ G_t^c = \sum_{k=0}^{T}\gamma^k(R_{t+k+1} + c)\\
-    Then \ \ v_{\pi}^c(s) &= \mathbb{E}[G_t^c | S_{t}=s]\\
-    &= \mathbb{E}[\sum_{k=0}^{T}\gamma^k(R_{t+k+1} + c) | S_{t}=s]\\
-    &= \mathbb{E}[\sum_{k=0}^{T}\gamma^k(R_{t+k+1} + \sum_{k=0}^{T}\gamma^kc) | S_{t}=s]\\
-    &= v_{\pi}(s) + \sum_{k=0}^{T}\gamma^kc\\
-    &= v_{\pi}(s) + c\frac {1 - \gamma^{T+1}} {1-\gamma}\\
-    c\frac {1 - \gamma^{T+1}} {1-\gamma}, &\text{ increase earlier traversed states with higher values }
-  \end{aligned}
-\]
-
-% Exercise 3.16
-\[
-  \begin{aligned}
-    v_{\pi}(s) &= \mathbb{E}_{\pi} [Gt | S_t = s]\\
-    &= \mathbb{E}_{\pi} [ \mathbb{E}_{\pi}[ Gt | S_t=s, A_t = a] | S_t=s] \text{ (the law of iterated expectation)} \\
-    &= \mathbb{E}_{\pi} [ q_{\pi}(s, \pi(s)) | S_{t}=s]\\
-    &= \sum_{a}\pi(a|s) p_{\pi}(s, a)
-  \end{aligned}
-\]
-
-% Exercise 3.17
-\[
-  \begin{aligned}
-    q_{\pi}(s) &= \mathbb{E}[ Gt | S_t=s, A_t = a]\\
-    &= \mathbb{E}_{\pi} [ R_{t=1} + \gamma G_{t+1} | S_t=s, A_t = a] \\
-    &= \mathbb{E}_{\pi} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E}_{\pi} [ \gamma G_{t+1} | S_t=s, A_t = a] \\
-    &= \mathbb{E}_{\pi} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E}_{\pi} [ \mathbb{E}_{\pi} [\gamma G_{t+1} | S_t=s, A_t = a, S_{t+1} = s'] | S_t=s, A_t = a] \\
-    &= \mathbb{E}_{\pi} [ R_{t=1} | S_t=s, A_t = a] + \mathbb{E}_{\pi} [\gamma v_{\pi}(S_{t+1}) | S_t=s, A_t = a] \\
-    &= \sum_{s', r} p(s',r|s,a) [r + \gamma v(s')]
-  \end{aligned}
-\]
-
-%  Exercise 3.22
-\[
-  \begin{aligned}
-    \gamma &= 0, \ v_{\pi_{Left}}^{top} = 1 + 0 * v^{left} = 1, \ \ v_{\pi_{Right}}^{top} = 0 + 0 * v^{right} = 0; \\
-    \gamma &= 0.9, \ v_{\pi_{Left}}^{top} = 1 + 0.9 * v^{left} = 1, \ \ v_{\pi_{Right}}^{top} = 0 + 0.9 * v^{right} = 1.8; \\
-    \gamma &= 0.5, \ v_{\pi_{Left}}^{top} = 1 + 0.5 * v^{left} = 1, \ \ v_{\pi_{Right}}^{top} = 0 + 0.5 * v^{right} = 1;
-  \end{aligned}
-\]
-
-%  Exercise 3.23, 24, 25, 26
-\[
-  \begin{aligned}
-    &v_*(s) &&= \max_a (q_*(s, a)) \ \ &exercise3.23 \\
-    &q_*(s,a) &&= \sum_{s',r} p(s',r|s,a)[r + \gamma v_*(s')] \ \ &exercise3.24 \\
-    &\pi_*(s) &&= \arg\max_a (q_*(s, a))  \ \ &exercise3.25 \\
-    &\pi_*(s) &&= \arg\max_a (\sum_{s',r} p(s',r|s,a)[r + \gamma v_*(s')])  \ \ &exercise3.26
-  \end{aligned}
-\]
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Chapter 4
@@ -148,10 +9,10 @@
 %  Exercise 4.1
 \[
   \begin{aligned}
-    For \ q_{\pi}(s,a) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
+    \ q_{\pi}(s,a) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
     &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(S_{t+1})]\\
     \\
-    So \ q_{\pi}(11,down) &= \sum_{s',r}p(s',r|11,down)[r + \gamma v_{\pi}(s')], \ (s'=termination, r=-1, \gamma = 1) \\
+    q_{\pi}(11,down) &= \sum_{s',r}p(s',r|11,down)[r + \gamma v_{\pi}(s')], \ (s'=termination, r=-1, \gamma = 1) \\
     &= r + 1*v_{\pi}(S_{t+1}) = -1 + 0 = -1 \\
     \\
     q_{\pi}(7,down) &= \sum_{s',r}p(s',r|7,down)[r + \gamma v_{\pi}(s')], \  for \  s'=11, r=-1, \gamma = 1\\
@@ -168,7 +29,6 @@
     &= \mathbb{E}_{\pi}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
     &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(s')]\\
     &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{\pi}(s',a')]\\
-    \\So \ \ &
     q_{k+1}(s, a) &= \mathbb{E}_{\pi}[R_{t+1} + \gamma v_{k}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
     &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{k}(s',a')]
   \end{aligned}
@@ -178,30 +38,25 @@
 \[
   \begin{aligned}
     1. \ & Initialization\\
-    & q(s, a) \in \mathbb{R}, \\
+    & Q(s, a) \in \mathbb{R}, \pi(s) \in \mathbb{A}, all s \in \mathbb{S} \ and \ a \in \mathbb{A}(s)\\
+    \\
     2. \ & Policy \ Evaluation\\
+    &Repeat\\
+    &\qquad \Delta \leftarrow 0\\
+    &\qquad for each s \in \mathbb{S}:\\
+    &\qquad \qquad for each a \in \mathbb{A}(s):\\
+    &\qquad \qquad \qquad q \leftarrow Q(s, a)\\
+    &\qquad \qquad \qquad Q(s, a) \leftarrow \sum_{s', r} p(s',r|s,a)[r + \gamma (\sum_{\pi(s')}Q(s',\pi(s')))]\\
+    &\qquad \qquad \qquad \Delta \leftarrow \max (\Delta, |q - Q(s,a)|)\\
+    &until \ \ \Delta < \theta \ \ \text{(a small positive number)}
+    \\
     3. \ & Policy \ Improvement\\
-    policy-stable <-
-  \end{aligned}
-\]
-
-
-
-% Bellman Equation & Bellman Optimality Equation: value function & action-value function
-\[
-  \begin{aligned}
-  v_{\pi}(s) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s] \\
-  &= \sum_{a}\pi(a|s) \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(s')]\\
-  \\
-  v_{*}(s) &= \max_{a}\mathbb{E}[R_{t+1} + \gamma v_{*}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-  &= \max_{a}\sum_{s',r}p(s',r|s,a)[r + \gamma v_{*}(s')]\\
-  \\
-  q_{\pi}(s,a) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-  &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(s')]\\
-  &= \sum_{s',r}p(s',r|s,a)[r + \gamma (\sum_{a'}\pi(a'|s') q_{\pi}(s',a')])]\\
-  \\
-  q_{*}(s,a) &= \mathbb{E}[R_{t+1} + \gamma \max_{a'}q_{*}(S_{t+1}, a') | S_{t}=s, A_{t}=a]\\
-  &= \sum_{s',r}p(s',r|s,a)[r + \gamma \max_{a'}q_{*}(s', a')]
+    &\text{policy-stable} \leftarrow true\\
+    &for \ each \ s \in \mathbb{S}:\\
+    &\qquad old-action \leftarrow \pi(s)\\
+    &\qquad \pi(s) \leftarrow \arg\max_a Q(s, a), a \in \mathbb{A}(s), \text{ break ties by choose the first action}\\
+    &\qquad if \ old-action \not= \pi(s), \text { then policy-stable }  \leftarrow false\\
+    &\text {if policy-stable, then stop and return Q}  \approx q_* \ and \ \pi \approx \pi_*; \text { else go to 2}
   \end{aligned}
 \]
 
