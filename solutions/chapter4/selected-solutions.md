@@ -17,9 +17,11 @@
 `Exercise 4.6`
 > ![](figures/exercise_4-6.png "Exercise 4.6")
 
-`Exercise 4.8`
-> ![](figures/exercise_4-8.png "Exercise 4.8")
+`Exercise 4.7`
+> ![](figures/exercise_4-7.png "Exercise 4.7")
 
+`Exercise 4.10`
+> ![](figures/exercise_4-10.png "Exercise 4.10")
 
 
 ---
