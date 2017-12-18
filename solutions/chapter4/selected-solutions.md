@@ -29,7 +29,7 @@
 ### 1. Car Rental
 
 __Car Rental__
-![alt text](figures/figure_4-2.png "Car Rental Using Policy Iteration")
+![](figures/figure_4-2.png "Car Rental Using Policy Iteration")
 
 __Car Rental Policy__
 
@@ -58,7 +58,7 @@ First/second| 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|
 20|      5|      5|      5|      4|      4|      3|      2|      2|      2|      2|      2|      2|      1|      1|      1|      1|      1|      1|      0|      0|      0||
 
 __Car Rental State Values__
-![alt text](figures/figure_4-2_state_values.png "Car Rental State Values")
+![](figures/figure_4-2_state_values.png "Car Rental State Values")
 
 |First/second| 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|
 |:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
@@ -87,7 +87,7 @@ __Car Rental State Values__
 
 ### Car Rental Exercise 4.5
 __Car Rental__
-![alt text](figures/exercise_4-5_optimal_actions.png "Car Rental State Values")
+![](figures/exercise_4-5_optimal_actions.png "Car Rental State Values")
 
 __Exercise 4.5 Policy__
 
@@ -116,7 +116,7 @@ __Exercise 4.5 Policy__
 20|      5|      5|      5|      5|      3|      3|      2|      1|      1|      1|      1|      1|      0|      0|      0|      0|      0|      0|      1|      1|      0||
 
 __Exercise 4.5 State Values__
-![alt text](figures/exercise_4-5_state_values.png "Car Rental State Values")
+![](figures/exercise_4-5_state_values.png "Car Rental State Values")
 
 |First/second| 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|
 |:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
@@ -148,15 +148,15 @@ __Exercise 4.9 Gambler Problem__
 
 #### head probability = 0.4
 
-![alt text](figures/exercise_4-9_state_values.png "Gambler Problem")
-![alt text](figures/exercise_4-9_optimal_actions.png "Gambler Problem")
+![](figures/exercise_4-9_state_values.png "Gambler Problem")
+![](figures/exercise_4-9_optimal_actions.png "Gambler Problem")
 
 #### head probability = 0.25
 
-![alt text](figures/exercise_4-9_state_values_2.png "Gambler Problem")
-![alt text](figures/exercise_4-9_optimal_actions_2.png "Gambler Problem")
+![](figures/exercise_4-9_state_values_2.png "Gambler Problem")
+![](figures/exercise_4-9_optimal_actions_2.png "Gambler Problem")
 
 #### head probability = 0.55
 
-![alt text](figures/exercise_4-9_state_values_3.png "Gambler Problem")
-![alt text](figures/exercise_4-9_optimal_actions_3.png "Gambler Problem")
+![](figures/exercise_4-9_state_values_3.png "Gambler Problem")
+![](figures/exercise_4-9_optimal_actions_3.png "Gambler Problem")

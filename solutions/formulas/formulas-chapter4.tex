@@ -60,4 +60,43 @@
   \end{aligned}
 \]
 
+% Exercise 4.7 policy iteration for E-Soft
+\[
+  \begin{aligned}
+    1. \ & Initialization\\
+    & V(s) \in \mathbb{R}, \ all \ s \in \mathbb{S}; \\
+    & \pi(a|s) \ an \ \epsilon-soft \ policy, a \in \mathbb{A}(s):\\
+    &\qquad \pi(a|s) =\left\{
+            \begin{aligned}
+               &= 1 - \epsilon + \frac {\epsilon} {|\mathbb{A}(s)|},
+                  \ a = a_{\epsilon}, a_{\epsilon} \in \mathbb{A}(s), \text{ and choose arbitrarily } \\
+               &= \frac {\epsilon} {|\mathbb{A}|(s)}, \ otherwise
+            \end{aligned}
+            \right.\\
+    \\
+    2. \ & Policy \ Evaluation\\
+    &Repeat\\
+    &\qquad \Delta \leftarrow 0\\
+    &\qquad for each s \in \mathbb{S}:\\
+    &\qquad \qquad v \leftarrow V(s)\\
+    &\qquad \qquad V(s) \leftarrow \sum_a \pi(a|s)\sum_{s', r} p(s',r|s,a)[r + \gamma v(s')] \\
+    &\qquad \qquad \Delta \leftarrow \max (\Delta, |v - V(s)|)\\
+    &until \ \ \Delta < \theta \ \ \text{(a small positive number)}
+    \\
+    3. \ & Policy \ Improvement\\
+    &\text{policy-stable} \leftarrow true\\
+    &for \ each \ s \in \mathbb{S}:\\
+    &\qquad a_{\epsilon} \leftarrow \arg\max_a \pi(a|s)\\
+    &\qquad \pi(a|s) \leftarrow \left\{
+      \begin{aligned}
+        &= 1 - \epsilon + \frac {\epsilon} {|\mathbb{A}(s)|},
+               \ a = \arg\max_a \sum_{s', r} p(s',r|s,a)[r + \gamma v(s')] \\
+        &= \frac {\epsilon} {|\mathbb{A}|(s)}, \ otherwise
+      \end{aligned}
+    \right.\\
+    &\qquad if \ a_{\epsilon} \not= \arg\max_a \pi(a|s), \text { then policy-stable } \leftarrow false \\
+    &\text {if policy-stable, then stop and return V}  \approx v_* \ and \ \pi \approx \pi_*; \text { else go to 2}
+  \end{aligned}
+\]
+
 \end{document}
