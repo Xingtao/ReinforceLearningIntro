@@ -104,7 +104,8 @@
   \begin{aligned}
     v_{k+1} & \overset{.}{=} \max_a \mathbb{E}_[ R_{t+1} + \gamma v(S_{t+1})| S_{t}=s, A_{t}=a]\\
     &= \sum_{s',r}p(s',r|s,a)[r+\gamma v_k(s')]\\
-    q_{k+1} & \overset{.}{=} \sum_{s',r}p(s',r|s,a)[r + \gamma v(S_{t+1})]\\
+    q_{k+1} & \overset{.}{=} \mathbb{E}_[ R_{t+1} + \gamma (\max_{a'} v(S_{t+1}))| S_{t}=s, A_{t}=a, A_{t+1}=a']\\
+    &=\sum_{s',r}p(s',r|s,a)[r + \gamma (\max_{a'}v_k(s'))]\\
     &= \sum_{s',r}p(s',r|s,a)[r + \gamma  \max_{a'} \pi(a'|s')q_k(s',a')]
   \end{aligned}
 \]
