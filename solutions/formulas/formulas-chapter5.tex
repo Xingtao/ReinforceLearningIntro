@@ -4,109 +4,17 @@
 \begin{document}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%% Chapter 4
+%%%% Chapter 5
 
-%  Exercise 4.1
+%  Exercise 5.5
 \[
   \begin{aligned}
-    \ q_{\pi}(s,a) &= \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(S_{t+1})]\\
-    \\
-    q_{\pi}(11,down) &= \sum_{s',r}p(s',r|11,down)[r + \gamma v_{\pi}(s')], \ (s'=termination, r=-1, \gamma = 1) \\
-    &= r + 1*v_{\pi}(S_{t+1}) = -1 + 0 = -1 \\
-    \\
-    q_{\pi}(7,down) &= \sum_{s',r}p(s',r|7,down)[r + \gamma v_{\pi}(s')], \  for \  s'=11, r=-1, \gamma = 1\\
-    &= r + 1*v_{\pi}(11) \\
-    &= -1 + 0.25q_{\pi}(11,up) + 0.25q_{\pi}(11,left) + 0.25q_{\pi}(11,right) + 0.25q_{\pi}(11,down)\\
-    &\text{after enough runs, those values will converge}
-  \end{aligned}
-\]
-
-% Exercise 4.3
-\[
-  \begin{aligned}
-    q_{\pi}(s,a) &= \mathbb{E}_{\pi}[ Gt | S_{t}=s, A_{t}=a]\\
-    &= \mathbb{E}_{\pi}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma v_{\pi}(s')]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{\pi}(s',a')]\\
-    q_{k+1}(s, a) &= \mathbb{E}_{\pi}[R_{t+1} + \gamma v_{k}(S_{t+1}) | S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma \sum_{a'}\pi(a'|s')q_{k}(s',a')]
-  \end{aligned}
-\]
-
-% Exercise 4.6
-\[
-  \begin{aligned}
-    1. \ & Initialization\\
-    & Q(s, a) \in \mathbb{R}, \pi(s) \in \mathbb{A}, all s \in \mathbb{S} \ and \ a \in \mathbb{A}(s)\\
-    \\
-    2. \ & Policy \ Evaluation\\
-    &Repeat\\
-    &\qquad \Delta \leftarrow 0\\
-    &\qquad for each s \in \mathbb{S}:\\
-    &\qquad \qquad for each a \in \mathbb{A}(s):\\
-    &\qquad \qquad \qquad q \leftarrow Q(s, a)\\
-    &\qquad \qquad \qquad Q(s, a) \leftarrow \sum_{s', r} p(s',r|s,a)[r + \gamma (\sum_{\pi(s')}Q(s',\pi(s')))]\\
-    &\qquad \qquad \qquad \Delta \leftarrow \max (\Delta, |q - Q(s,a)|)\\
-    &until \ \ \Delta < \theta \ \ \text{(a small positive number)}
-    \\
-    3. \ & Policy \ Improvement\\
-    &\text{policy-stable} \leftarrow true\\
-    &for \ each \ s \in \mathbb{S}:\\
-    &\qquad old-action \leftarrow \pi(s)\\
-    &\qquad \pi(s) \leftarrow \arg\max_a Q(s, a), a \in \mathbb{A}(s), \text{ break ties by choose the first action}\\
-    &\qquad if \ old-action \not= \pi(s), \text { then policy-stable }  \leftarrow false\\
-    &\text {if policy-stable, then stop and return Q}  \approx q_* \ and \ \pi \approx \pi_*; \text { else go to 2}
-  \end{aligned}
-\]
-
-% Exercise 4.7 policy iteration for E-Soft
-\[
-  \begin{aligned}
-    1. \ & Initialization\\
-    & V(s) \in \mathbb{R}, \ all \ s \in \mathbb{S}; \\
-    & \pi(a|s) \ an \ \epsilon-soft \ policy, a \in \mathbb{A}(s):\\
-    &\qquad \pi(a|s) =\left\{
-            \begin{aligned}
-               &= 1 - \epsilon + \frac {\epsilon} {|\mathbb{A}(s)|},
-                  \ a = a_{\epsilon}, a_{\epsilon} \in \mathbb{A}(s), \text{ and choose arbitrarily } \\
-               &= \frac {\epsilon} {|\mathbb{A}|(s)}, \ otherwise
-            \end{aligned}
-            \right.\\
-    \\
-    2. \ & Policy \ Evaluation\\
-    &Repeat\\
-    &\qquad \Delta \leftarrow 0\\
-    &\qquad for each s \in \mathbb{S}:\\
-    &\qquad \qquad v \leftarrow V(s)\\
-    &\qquad \qquad V(s) \leftarrow \sum_a \pi(a|s)\sum_{s', r} p(s',r|s,a)[r + \gamma v(s')] \\
-    &\qquad \qquad \Delta \leftarrow \max (\Delta, |v - V(s)|)\\
-    &until \ \ \Delta < \theta \ \ \text{(a small positive number)}
-    \\
-    3. \ & Policy \ Improvement\\
-    &\text{policy-stable} \leftarrow true\\
-    &for \ each \ s \in \mathbb{S}:\\
-    &\qquad a_{\epsilon} \leftarrow \arg\max_a \pi(a|s)\\
-    &\qquad \pi(a|s) \leftarrow \left\{
-      \begin{aligned}
-        &= 1 - \epsilon + \frac {\epsilon} {|\mathbb{A}(s)|},
-               \ a = \arg\max_a \sum_{s', r} p(s',r|s,a)[r + \gamma v(s')] \\
-        &= \frac {\epsilon} {|\mathbb{A}|(s)}, \ otherwise
-      \end{aligned}
-    \right.\\
-    &\qquad if \ a_{\epsilon} \not= \arg\max_a \pi(a|s), \text { then policy-stable } \leftarrow false \\
-    &\text {if policy-stable, then stop and return V}  \approx v_* \ and \ \pi \approx \pi_*; \text { else go to 2}
-  \end{aligned}
-\]
-
-% Exercise 4.10
-\[
-  \begin{aligned}
-    v_{k+1} & \overset{.}{=} \max_a \mathbb{E}_[ R_{t+1} + \gamma v(S_{t+1})| S_{t}=s, A_{t}=a]\\
-    &= \sum_{s',r}p(s',r|s,a)[r+\gamma v_k(s')]\\
-    q_{k+1} & \overset{.}{=} \mathbb{E}_[ R_{t+1} + \gamma (\max_{a'} v(S_{t+1}))| S_{t}=s, A_{t}=a, A_{t+1}=a']\\
-    &=\sum_{s',r}p(s',r|s,a)[r + \gamma (\max_{a'}v_k(s'))]\\
-    &= \sum_{s',r}p(s',r|s,a)[r + \gamma  \max_{a'} \pi(a'|s')q_k(s',a')]
+    &\text{ For every-visit MC, the expected square of importance-sampling scaled return for a state s is: } \\
+    &\qquad \quad\ \mathbb{E}_b[\sum_{t'\in\tau(s)}(\prod_{t=t'}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2]\\
+    &\qquad \ = \mathbb{E}_b[(\prod_{t=0}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2] \ + \
+                \mathbb{E}_b[\sum_{t'\in\tau(s), t'\not=0}(\prod_{t=t'}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2]\\
+    &\qquad >=  \mathbb{E}_b[(\prod_{t=0}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2] \ \ \ (1) \\
+    &\text{ It is proven that (1) has infinite variance, so the variance for every-visit MC estimator is still infinite.} \\
   \end{aligned}
 \]
 
