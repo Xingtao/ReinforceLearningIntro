@@ -8,3 +8,5 @@
 ##### [Chapter3 Finit Markov Decision Processes - Selected Exercise Solutions & Experiments](./solutions/chapter3/selected-solutions.md)
 
 ##### [Chapter4 Dynamic Programming - Selected Exercise Solutions & Experiments](./solutions/chapter4/selected-solutions.md)
+
+##### [Chapter5 Monte Carlo Methods - Selected Exercise Solutions & Experiments](./solutions/chapter5/selected-solutions.md)
