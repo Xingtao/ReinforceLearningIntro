@@ -6,6 +6,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Chapter 5
 
+%  Exercise 5.3
+\[
+  \begin{aligned}
+    Q(s, a) &= \mathbb{E}[R_{t+1} + \gamma V(S_{t+1}) | S_t=s, A_t=a]\\
+    &=\sum_{s',r} p(s',r|s,a) [r + \gamma V(s')]\\
+    &=r(s,a) + \gamma \sum_{s'} p(s'|s,a) \frac {\sum_{t'\in\tau(s')}\rho_{t':T(t')-1}G_{t'}}
+                                                {\sum_{t'\in\tau(s')}\rho_{t':T(t')-1}}
+  \end{aligned}
+\]
+
 %  Exercise 5.5
 \[
   \begin{aligned}
