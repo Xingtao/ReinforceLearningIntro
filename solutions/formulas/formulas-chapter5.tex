@@ -28,4 +28,22 @@
   \end{aligned}
 \]
 
+%  Exercise 5.7
+\[
+  \begin{aligned}
+    V_{n+1} &\overset {.} {=} \frac {\sum_{k=1}^{n} W_k G_k} {\sum_{k=1}^{n} W_k}, \ \ n \geq 1 \\
+    &= \frac {\sum_{k=1}^{n-1} W_k G_k + W_nG_n} {\sum_{k=1}^{n} W_k} \\
+    &= \frac {\frac {\sum_{k=1}^{n-1} W_k G_k + W_nG_n} {\sum_{k=1}^{n-1} W_k}}
+             {\frac {\sum_{k=1}^{n} W_k} {\sum_{k=1}^{n-1} W_k}}\\
+    &= \frac {V_n + \frac {W_nG_n} {\sum_{k=1}^{n-1} W_k}}
+             {\frac {\sum_{k=1}^{n} W_k} {\sum_{k=1}^{n-1} W_k}}\\
+   &= \frac {\sum_{k=1}^{n-1} W_k V_n} {\sum_{k=1}^{n} W_k} + \frac {W_nG_n} {\sum_{k=1}^{n} W_k} \\
+   &= \frac {\sum_{k=1}^{n-1} W_k V_n} {\sum_{k=1}^{n} W_k} +
+      (\frac {W_n V_n} {\sum_{k=1}^{n} W_k} - \frac {W_n V_n} {\sum_{k=1}^{n} W_k}) +
+      \frac {W_nG_n} {\sum_{k=1}^{n} W_k} \\
+   &= V_n + \frac {W_n(G_n - V_n)} {\sum_{k=1}^{n} W_k} \\
+   &= V_n + \frac {W_n} {C_n}[G_n - V_n], \ \ C_{n+1} \overset {.} {=} C_n + W_{n+1}
+  \end{aligned}
+\]
+
 \end{document}
