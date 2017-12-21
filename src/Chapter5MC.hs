@@ -7,9 +7,12 @@
 
 module Chapter5MC
     ( Blackjack(..)
-    , Act(..)
+    , BJAct(..)
+    , Racetrack(..)
     , mkBlackjack
     , blackjackStep
+    , mkRacetrack
+    , racetrackStep
     ) where
 
 import           Control.Monad
@@ -36,11 +39,11 @@ import           Utils
 
 ------------------------------------------------------------------------------------------
 -- | Monte Carlo Method Experiment: Blackjack
---   Will implement: MonteCarlo-E-Soft(On-Policy), MonteCarlo-Off-Policy
+--   Will implement: MonteCarlo-E-Soft (On-Policy)
 
-data Act = Hit | Stick deriving (Show, Ord, Eq)
+data BJAct = Hit | Stick deriving (Show, Ord, Eq)
 -- ((sum, dealer's one card, usable ace), act)
-type SAPair = ((Int, Int, Bool), Act)
+type SAPair = ((Int, Int, Bool), BJAct)
 
 -- epsilon-soft, reduce epsilon as episode increase (epsilon <- 1 / episode count)
 data Blackjack = Blackjack {
@@ -99,7 +102,7 @@ generatePlayerTrajectory blackjack count dfc (playerSum, aceNum) (x:xs)
         Hit -> (((playerSum, dfc, useAce aceNum), Hit) :) <$>
                  generatePlayerTrajectory blackjack count dfc (playerSum + x, aceNum) xs
 
-epsilonGreedyAct :: Blackjack -> Int -> (Int, Int, Bool) -> IO Act
+epsilonGreedyAct :: Blackjack -> Int -> (Int, Int, Bool) -> IO BJAct
 epsilonGreedyAct blackjack count s = do
   bExplore <- headOrTail (1.0 / (fromIntegral count)) -- head means explore
   case bExplore of
@@ -134,3 +137,67 @@ headOrTail eps = sample $ bernoulli eps
 
 useAce :: Int -> Bool
 useAce num = (num > 0) ? (True, False)
+
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+-- | Monte Carlo Method Experiment: Racetrack
+--   Will implement: Monte Carlo Off-Policy
+
+-- state: (position, horizon velocity, vertical velocity)
+-- act:   (horizon velocity change, vertical velocity change)
+type RTAct = (Int, Int)
+type RTState = ((Int, Int), (Int, Int))
+type RTSA = (RTState, RTAct)
+
+data Racetrack = Racetrack {
+     _world :: [[Int]] -- 0 startings, 1 ends, -1 boundaries
+    ,_ww :: Int -- world's width
+    ,_wh :: Int -- world's height
+    ,_gamma :: Double
+    ,_actFailProb :: Double -- there are chances action won't take effect
+    ,_maxVelocity :: Int -- max velocity for both horizon & vertical velocity
+    ,_bPolicy :: M.Map RTState [RTAct]
+    ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
+    ,_qValues :: M.Map RTSA Double
+    ,_cValues :: M.Map RTSA Double
+    } deriving (Show)
+
+makeLenses'' Racetrack
+
+mkRacetrack :: (Int, Int) -> Double -> Double -> Int -> Racetrack
+mkRacetrack (w, h) discount actFailP maxV =
+  let 
+  in  Racetrack theWorld discount actFailP maxV behaviorP targetP qs cs
+
+{- the world: '=' boundary, '.' starting, '|' is end
+   it roughly has the following shape
+   ===========..........====
+   ==---------------------==
+   =----------------------==
+   =----------------------==
+   =----------------------==
+   ==---===---==---===-=====
+   =======----------------==
+   =======----------------==
+   =======----------------==
+   =======----------------==
+   =========--------------==
+   ===========------------==
+   =============----------==
+   ===============--------==
+   ===============-------===
+   ===============--------==
+   ===============---------|
+   ===============---------|
+   ===============---------|
+   ===============-------===
+   ===============------====
+   ===============------====
+   ===============-----=====
+   =========================
+-}
+
+genRaceWorld :: Int -> Int -> [[Int]]
+genRaceWorld w h = do  
+  let workldStart = over (elements (> (w `div` 2))) (const (negate 1)) .
+                    over (elements (< (w `div` 2))) (const (negate 1)) . take w $ [0..]

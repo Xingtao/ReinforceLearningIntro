@@ -78,7 +78,7 @@ drawBlackjack totalEpisode blackjack = do
   putStrLn $ prettyPrint aceResult True
   putStrLn $ prettyPrint noAceResult False
 
-prettyPrint :: M.Map (Int, Int, Bool) Act -> Bool -> String
+prettyPrint :: M.Map (Int, Int, Bool) BJAct -> Bool -> String
 prettyPrint result bUseAce = 
   let useIt = bUseAce ? ("Usable Ace: \n", "No Usable Ace: \n")
       header = "|p/d" ++ (concat $ zipWith (\ a b -> a ++ show b) (repeat "|") [1..10]) ++ "|\n"     
