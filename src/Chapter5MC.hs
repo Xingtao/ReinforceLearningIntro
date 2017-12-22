@@ -150,7 +150,7 @@ type RTState = ((Int, Int), (Int, Int))
 type RTSA = (RTState, RTAct)
 
 data Racetrack = Racetrack {
-     _world :: [[Int]] -- 0 startings, 1 ends, -1 boundaries
+     _world :: [[Int]] -- 0 startings, -1 boundaries, -2 ends, > 0 is road
     ,_ww :: Int -- world's width
     ,_wh :: Int -- world's height
     ,_gamma :: Double
@@ -166,16 +166,27 @@ makeLenses'' Racetrack
 
 mkRacetrack :: (Int, Int) -> Double -> Double -> Int -> Racetrack
 mkRacetrack (w, h) discount actFailP maxV =
-  let 
-  in  Racetrack theWorld discount actFailP maxV behaviorP targetP qs cs
+  let world = genRaceWorld w h
+      genBehaviorPolicyAllStateAct world
+  in  Racetrack world discount actFailP maxV behaviorP targetP qs cs
+
+racetrackStep 
+  
+
+
+    ,_bPolicy :: M.Map RTState [RTAct]
+    ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
+    ,_qValues :: M.Map RTSA Double
+    ,_cValues :: M.Map RTSA Double
+
 
 {- the world: '=' boundary, '.' starting, '|' is end
    it roughly has the following shape
-   ===========..........====
+   ======........===========
    ==---------------------==
-   =----------------------==
-   =----------------------==
-   =----------------------==
+   ==---------------------==
+   ==---------------------==
+   ==---------------------==
    ==---===---==---===-=====
    =======----------------==
    =======----------------==
@@ -187,17 +198,39 @@ mkRacetrack (w, h) discount actFailP maxV =
    ===============--------==
    ===============-------===
    ===============--------==
-   ===============---------|
-   ===============---------|
-   ===============---------|
-   ===============-------===
-   ===============------====
-   ===============------====
-   ===============-----=====
-   =========================
+   ============--------=====
+   ===========--------======
+   ==========--------=======
+   ============-------======
+   =========------==========
+   =========------==========
+   =======-----=============
+   =======|||||=============
 -}
 
 genRaceWorld :: Int -> Int -> [[Int]]
 genRaceWorld w h = do  
-  let workldStart = over (elements (> (w `div` 2))) (const (negate 1)) .
-                    over (elements (< (w `div` 2))) (const (negate 1)) . take w $ [0..]
+  let tenthWidth = w `div` 10
+      fifthHeight = w `div` 10      
+      unitBarrier = replicate tenthWidth (negate 1)
+      unitRoad = replicate tenthWidth 1
+      -- 0 startings, -1 boundaries, -2 ends, > 0 is road
+      worldStart = over (elements (< (w `div` 4))) (const (negate 1)) .
+                   over (elements (> (w `div` 2))) (const (negate 1)) . take w $ [0..]
+      worldStart' = map (\ x -> if x > 0 then 0 else x) worldStart
+      barrierLine = take w . concat $ repeat (unitBarrier ++ unitRoad)
+      -- part1, head tail is boundary
+      part1Line = take w (unitBarrier ++ (concat . replicate 8 $ unitRoad) ++ (repeat $ negate 1))
+      part1 = take fifthHeight $ repeat part1Line
+      part1' = map (element (w-1) ~. (negate 1)) part1
+      -- part2, head boundary increase
+      part2 = take w (map (\x -> (unitBarrier ++ (replicate x (negate 1)) ++
+                                 (concat $ replicate (fifthHeight*2 - x) unitRoad) ++
+                                 (replicate w (negate 1))))
+                      [0..fifthHeight*2])
+      part2' = map (element (w-1) ~. (negate 1)) part2
+      -- part3, tail boundary increase
+      part3 = reverse part2'
+      world = take h ([worldStart'] ++ part1' ++ [barrierLine] ++ part2' ++ part3)
+      worldFinishLine = over (elelments (== (negate 1))) (const (negate 2)) (last world)
+  in  (element (h-1) ~. worldFinishLine) world
