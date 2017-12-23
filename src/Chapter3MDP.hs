@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables         #-}
 {-# LANGUAGE MultiParamTypeClasses       #-}
 {-# LANGUAGE TypeOperators               #-}
+{-# LANGUAGE BangPatterns                #-}
 
 module Chapter3MDP
     ( World(..)

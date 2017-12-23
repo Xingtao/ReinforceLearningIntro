@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeOperators               #-}
 {-# LANGUAGE TypeSynonymInstances        #-}
 {-# LANGUAGE FlexibleInstances           #-}
+{-# LANGUAGE BangPatterns                #-}
 
 module Chapter4DP
     ( CarRental(..)

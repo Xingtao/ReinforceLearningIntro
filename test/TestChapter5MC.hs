@@ -32,9 +32,12 @@ testChapter5 :: FilePath -> IO ()
 testChapter5 configPath = do
   print "Chapter 5 Experiment Starting "
   (config, _) <- autoReload autoConfig [Required configPath]
-  doBlackjackTest config
+  (bBlackjackTest::Bool) <- require config "blackjack.bTest"
+  (bRacetrackTest::Bool) <- require config "racetrack.bTest"
+  when bBlackjackTest (doBlackjackTest config)
+  when bRacetrackTest (doRacetrackTest config)
 
-----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 -- Blackjack Test
 doBlackjackTest :: Config -> IO () 
 doBlackjackTest config = do
@@ -69,7 +72,7 @@ doBlackjackTest config = do
 drawBlackjack :: Int -> Blackjack -> IO ()
 drawBlackjack totalEpisode blackjack = do
   let (hitMap, stickMap) = M.partitionWithKey (\ (_, a) _ -> a == Hit) (_qValues blackjack)
-      (hitMap', stickMap') = (M.mapKeys (\ (s, _) -> s) hitMap, M.mapKeys (\ (s, _) -> s) stickMap)
+      (hitMap', stickMap') = (M.mapKeys (\(s,_) -> s) hitMap, M.mapKeys (\(s,_) -> s) stickMap)
       !result = M.mergeWithKey (\ _ (_,v1) (_,v2) -> Just ((v1 > v2) ? (Hit, Stick)))
                                (M.mapMaybe (\ _ -> Just Hit))
                                (M.mapMaybe (\ _ -> Just Stick)) hitMap' stickMap'
@@ -81,7 +84,7 @@ drawBlackjack totalEpisode blackjack = do
 prettyPrint :: M.Map (Int, Int, Bool) BJAct -> Bool -> String
 prettyPrint result bUseAce = 
   let useIt = bUseAce ? ("Usable Ace: \n", "No Usable Ace: \n")
-      header = "|p/d" ++ (concat $ zipWith (\ a b -> a ++ show b) (repeat "|") [1..10]) ++ "|\n"     
+      header = "|p/d" ++ (concat $ zipWith (\ a b -> a ++ show b) (repeat "|") [1..10])++"|\n"
       alignHeader = (concat . take 11 $ repeat "|:-----:") ++ "|\n"      
   in  useIt ++ header ++ alignHeader ++ (concat $ map showRows [12..21])
   where
@@ -92,3 +95,38 @@ prettyPrint result bUseAce =
   fillCell playerSum dealerCard =
     let actStr = show . fromJust $ M.lookup (playerSum, dealerCard, bUseAce) result
     in  actStr ++ "|"
+
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+---- Racetrack Test
+
+doRacetrackTest :: Config -> IO () 
+doRacetrackTest config = do
+  ([width, height]::[Int]) <- require config "racetrack.world"
+  (discount::Double) <- require config "racetrack.discount"
+  (maxV::Double) <- require config "racetrack.maxVelocity"
+  (actFailP::Double) <- require config "racetrack.actFailProb"
+  (totalEpisodes::Int) <- require config "racetrack.totalEpisodes"
+  let !racetrack = mkRacetrack (width, height) discount actFailP maxV
+  -- do experiments
+  displayConsoleRegions $ do
+    putStrLn "Will do racetrack experiment "
+    pg <- newProgressBar def { pgWidth = 80
+                             , pgTotal = 100
+                             , pgOnCompletion = Just "Done :percent after :elapsed seconds"
+                             }
+    racetrack' <- loop pg 1 totalEpisodes racetrack
+    putStrLn "racetrack experiment finish. Final Results: "
+    putStrLn $ show racetrack'
+  threadDelay 100000
+  where
+  loop pg count totalEpisode racetrack 
+    | count >= totalEpisode = complete pg >> pure racetrack
+    | otherwise = do
+      racetrack' <- fst <$> runStateT (racetrackStep count) racetrack
+      stat <- getProgressStats pg
+      let ticked = fromInteger $ stCompleted stat
+          percent = round $ (fromIntegral count) / (fromIntegral totalEpisode)
+          willTick = percent - ticked
+      tickN pg willTick
+      loop pg (count + 1) totalEpisode racetrack'

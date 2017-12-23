@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeOperators               #-}
 {-# LANGUAGE TypeSynonymInstances        #-}
 {-# LANGUAGE FlexibleInstances           #-}
+{-# LANGUAGE BangPatterns                #-}
 
 module Chapter5MC
     ( Blackjack(..)
@@ -170,14 +171,17 @@ mkRacetrack (w, h) discount actFailP maxV =
       genBehaviorPolicyAllStateAct world
   in  Racetrack world discount actFailP maxV behaviorP targetP qs cs
 
-racetrackStep 
-  
+racetrackStep :: State Racetrack (Bool, Int)
+racetrackStep = get >>= offMCOneEpisode >>= put
+
+offMCOneEpisode :: Racetrack -> State Racetrack Racetrack
+offMCOneEpisode = pure
 
 
-    ,_bPolicy :: M.Map RTState [RTAct]
-    ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
-    ,_qValues :: M.Map RTSA Double
-    ,_cValues :: M.Map RTSA Double
+--    ,_bPolicy :: M.Map RTState [RTAct]
+--    ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
+--    ,_qValues :: M.Map RTSA Double
+--    ,_cValues :: M.Map RTSA Double
 
 
 {- the world: '=' boundary, '.' starting, '|' is end
