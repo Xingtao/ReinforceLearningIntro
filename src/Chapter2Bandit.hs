@@ -110,9 +110,9 @@ selectOneAction = do
     Gradient _ -> do
       let gradientValues = map exp (_qValues bandit)
           gradientProbs = map ( / sum gradientValues) gradientValues
-          -- sampling according to distribution (element probability)
-          -- the following line will produce a very good result, even 0.4 without baseline. why?
-          -- is it because we do weighted random extract twice ?
+          -- Sampling according to distribution (element probability)
+          -- The following line will produce good result, even 0.4 without baseline. why?
+          -- Is it because we do weighted random extract twice ?
           weightedRVar = weightedShuffle $ zip gradientProbs [0..]
       liftIO $ head <$> sample weightedRVar
       -- pure $ fst $ argmaxWithIndex (zip [0..] gradientProbs)

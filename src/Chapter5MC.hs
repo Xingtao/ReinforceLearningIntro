@@ -48,7 +48,7 @@ type SAPair = ((Int, Int, Bool), BJAct)
 
 -- epsilon-soft, reduce epsilon as episode increase (epsilon <- 1 / episode count)
 data Blackjack = Blackjack {
-     _stepSize :: Double -- usually < 0, to use (1 / (s,a) occur count) as step size (stationary)
+     _stepSize :: Double -- usually < 0, to use (1/(s,a) occur count) as step size (stationary)
     ,_qValues :: M.Map SAPair (Int, Double) -- (state-action occurs count, sa value)
     } deriving (Show)
 
@@ -68,7 +68,8 @@ blackjackStep count = do
   playerCards <- liftIO $ replicateM 21 nextCard
   -- player first (explode first ...)  
   let (dealerSum, _) = getSumViaFixedPolicy 17 dealerCards
-  trajectories <- liftIO $ generatePlayerTrajectory blackjack count (head dealerCards) (0,0) playerCards
+  trajectories <- liftIO $ generatePlayerTrajectory 
+                               blackjack count (head dealerCards) (0,0) playerCards
   let (playerSum, _, _) = fst $ last trajectories
       !reward | playerSum < 0 = negate 1.0
               | playerSum > dealerSum = 1.0
@@ -90,11 +91,13 @@ blackjackStep count = do
 generatePlayerTrajectory :: Blackjack -> Int -> Int -> (Int, Int) -> [Int] -> IO [SAPair]
 generatePlayerTrajectory _ _ _ _ [] = pure []
 generatePlayerTrajectory blackjack count dfc (playerSum, aceNum) (x:xs)
-  | playerSum < 11 && x == 1 = generatePlayerTrajectory blackjack count dfc (playerSum + 11, aceNum+ 1) xs
+  | playerSum < 11 && x == 1 = generatePlayerTrajectory 
+                                   blackjack count dfc (playerSum + 11, aceNum+ 1) xs
   | playerSum <= 11 = generatePlayerTrajectory blackjack count dfc (playerSum + x, aceNum) xs
   | playerSum == 21 = pure [((21, dfc, useAce aceNum), Stick)]
   | playerSum > 21 = if (aceNum > 0)
-                        then generatePlayerTrajectory blackjack count dfc (playerSum - 10, aceNum - 1) (x:xs)
+                        then generatePlayerTrajectory 
+                                 blackjack count dfc (playerSum - 10, aceNum - 1) (x:xs)
                         else pure [((negate 1, dfc, False), Stick)] -- blow up
   | playerSum < 21 = do
       a <- epsilonGreedyAct blackjack count (playerSum, dfc, useAce aceNum)
@@ -122,7 +125,7 @@ getSumViaFixedPolicy standSum = foldl go (0, 0)
                             | acc >= standSum = (acc, aceAs11Num) -- it is ok, just stick
                             | card == 1 && acc + 11 <= 21 = (acc + 11, aceAs11Num + 1)
                             | card == 1 && acc + 11 > 21 = (acc + 1, aceAs11Num)
-                            | acc + card > 21 && aceAs11Num > 0 = (acc + card - 10, aceAs11Num - 1)
+                            | acc + card > 21 && aceAs11Num > 0 = (acc+card-10, aceAs11Num - 1)
                             | acc + card > 21 = (negate 1, aceAs11Num) -- blow up
                             | otherwise = (acc + card, aceAs11Num)
 
@@ -132,12 +135,12 @@ getSumViaFixedPolicy standSum = foldl go (0, 0)
 nextCard :: IO Int
 nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
 
+useAce :: Int -> Bool
+useAce num = (num > 0) ? (True, False)
+
 -- epsilon greedy, also random select Hit or Stick
 headOrTail :: Double -> IO Bool
 headOrTail eps = sample $ bernoulli eps
-
-useAce :: Int -> Bool
-useAce num = (num > 0) ? (True, False)
 
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
@@ -157,33 +160,68 @@ data Racetrack = Racetrack {
     ,_gamma :: Double
     ,_actFailProb :: Double -- there are chances action won't take effect
     ,_maxVelocity :: Int -- max velocity for both horizon & vertical velocity
-    ,_bPolicy :: M.Map RTState [RTAct]
     ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
     ,_qValues :: M.Map RTSA Double
     ,_cValues :: M.Map RTSA Double
+    ,_bPolicy :: M.Map RTState [RTAct]
+    ,_states :: [RTState]   
+    ,_acts :: [RTAct]   
     } deriving (Show)
 
 makeLenses'' Racetrack
 
+------------------------------------------------------------------------------------------
+-- Init racetrack 
 mkRacetrack :: (Int, Int) -> Double -> Double -> Int -> Racetrack
 mkRacetrack (w, h) discount actFailP maxV =
-  let world = genRaceWorld w h
-      genBehaviorPolicyAllStateAct world
-  in  Racetrack world discount actFailP maxV behaviorP targetP qs cs
+  let !world = genRaceWorld w h
+      !allStates = genAllStates world w h maxV
+      !allActs = [(aHor, aVer) | aHor <- [-1,0,1], aVer <- [-1,0,1]]
+      !saPair = [(s,a) | s <- allStates, a <- allActs]
+  in  Racetrack world discount actFailP maxV  
+                (M.fromList (zip allStates $ head allActs) -- targetP 
+                (M.fromList (zip saPair [0.0]) -- Q(s,a)
+                (M.fromList (zip saPair [0.0]) -- C(s,a)
+                allStates allActs
 
-racetrackStep :: State Racetrack (Bool, Int)
+-- generate all possible states, actions
+-- filter out according to world ? Right now no, won't depend on world's boundary
+genAllStates :: [[Int]] -> Int -> Int -> Int -> [RTState]
+genAllStates world w h maxV = 
+  [((x,y), (hor,ver)) | x <- [0..w-1], y <- [0..h-1], 
+                        hor <- [negate maxV, maxV], ver <- [negate maxV, maxV]]
+
+------------------------------------------------------------------------------------------
+-- step function
+racetrackStep :: StateT Racetrack IO Racetrack 
 racetrackStep = get >>= offMCOneEpisode >>= put
 
-offMCOneEpisode :: Racetrack -> State Racetrack Racetrack
-offMCOneEpisode = pure
+-- P91: Off-Policy MC control for estimating pi ~ pi*
+offMCOneEpisode :: Racetrack -> StateT Racetrack IO Racetrack
+offMCOneEpisode racetrack =
+  genBehaviorEpisodeSeq racetrack False >>= learningOneEpisode racetrack
 
+-- generate via random behavior policy
+genBehaviorEpisodeSeq :: Racetrack -> Bool -> IO [(RTState, RTAct, Double)]
+genBehaviorEpisodeSeq racetrack True = pure []
+genBehaviorEpisodeSeq racetrack False = do
+  startPos <- randomStartingPos racetrack 
+  randomActIdx <- liftIO $ sample (randomElement [0..(length (_acts racetrack) - 1)])
+  
+learningOneEpisode :: Racetrack -> IO Racetrack
+learningOneEpisode racetrack = do
+  
 
---    ,_bPolicy :: M.Map RTState [RTAct]
---    ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
---    ,_qValues :: M.Map RTSA Double
---    ,_cValues :: M.Map RTSA Double
-
-
+randomStartingPos :: Racetrack -> IO RTState
+randomStartingPos racetrack = do
+  let theWorld = _world racetrack
+      startings = filter (\ ((x, y), (hor, ver)) -> 
+                            x == 0 && (theWorld !! x !! y == 0) && hor == 0 && ver == 0) 
+                         (_states racetrack)
+  randomIdx <- liftIO $ sample (randomElement [0..(length startings - 1)])
+  pure (startings !! randomIdx)
+    
+------------------------------------------------------------------------------------------
 {- the world: '=' boundary, '.' starting, '|' is end
    it roughly has the following shape
    ======........===========
@@ -224,7 +262,8 @@ genRaceWorld w h = do
       worldStart' = map (\ x -> if x > 0 then 0 else x) worldStart
       barrierLine = take w . concat $ repeat (unitBarrier ++ unitRoad)
       -- part1, head tail is boundary
-      part1Line = take w (unitBarrier ++ (concat . replicate 8 $ unitRoad) ++ (repeat $ negate 1))
+      part1Line = take w (unitBarrier ++ (concat . replicate 8 $ unitRoad)
+                                      ++ (repeat $ negate 1))
       part1 = take fifthHeight $ repeat part1Line
       part1' = map (element (w-1) ~. (negate 1)) part1
       -- part2, head boundary increase

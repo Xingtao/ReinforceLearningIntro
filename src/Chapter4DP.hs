@@ -86,7 +86,7 @@ mkCarRental nLocations theTheta gamma maxCarNums earns
   initActions = Seq.fromList . take (length allStates) $ repeat (-1)
   stateVals = Seq.fromList . take (length allStates) $ repeat 0.0
   possibleActions = filterPossibilities allStates maxCarNums $ generateMoves maxTrans
-  prob lambda n = lambda ^ (fromIntegral n) / (fromIntegral $ factorial n)  * (exp $ negate lambda)
+  prob lambda n = lambda^(fromIntegral n) / (fromIntegral $ factorial n)*(exp $ negate lambda)
   -- NOTE: ignore poisson probability < 1% (take as 0)
   rentPoissonDist =
     zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.001) .
@@ -108,7 +108,8 @@ showCarRentalResult carRental =
   concat . toList $ Seq.zipWith4
     (\ s actionIdx saPair val ->
        show s ++ " -> " ++ (show $ Seq.index saPair actionIdx) ++ " -> " ++ show val ++ "\n")
-    (_states carRental) (_actions carRental) (_possibleActions carRental) (_stateValues carRental)
+    (_states carRental) (_actions carRental) 
+    (_possibleActions carRental) (_stateValues carRental)
 
 -- generate all states for multiple locations
 generateStates :: [Int] -> [[Int]]
@@ -118,7 +119,7 @@ generateStates (x:xs) = [(y:ys) | y <- [0..x], ys <- generateStates xs]
 -- generate one location's tansfer out possibilities
 generateOneMove :: Int -> Int -> [[Int]]
 generateOneMove 0   n = [[]]
-generateOneMove len n = [(x:xs) | x <- [0..n], xs <- generateOneMove (len - 1) n, sum (x:xs) <= n]
+generateOneMove len n = [(x:xs) |x <- [0..n], xs <- generateOneMove (len-1) n, sum (x:xs) <= n]
 
 -- combine all possible transfer moves
 generateMoves :: [Int] -> [[[Int]]]
@@ -194,10 +195,10 @@ caclOneActionValue carRental stateIdx s a =
 
 calcOneActionTransition :: CarRental -> Int -> [Int] -> [[Int]] -> [Int] -> [Int] -> Double
 calcOneActionTransition carRental stateIdx s a rents returns =
-  let locationsOut = map sum a
-      locationsIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) a
-      transferFees = sum $ zipWith (*) (_transferCost carRental) (map fromIntegral locationsOut)
-      sNight = zipWith (+) locationsIn (zipWith (-) s locationsOut)
+  let locOut = map sum a
+      locIn = foldl (zipWith (+)) (take (_locationNum carRental) $ repeat 0) a
+      transferFees = sum $ zipWith (*) (_transferCost carRental) (map fromIntegral locOut)
+      sNight = zipWith (+) locIn (zipWith (-) s locOut)
       sNight' = minElement sNight (_maxCars carRental)
       -- the second day
       rents' = minElement sNight' rents
@@ -209,7 +210,8 @@ calcOneActionTransition carRental stateIdx s a rents returns =
       base = (rentIncomes - transferFees) +
              (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
       parkingFee = sum $ zipWith3 (\ s limit fee -> (s > limit) ? (fee, 0))
-                                  sFinal (_freeParkingLimit carRental) (_additionalParkingCost carRental)
+                                  sFinal (_freeParkingLimit carRental) 
+                                  (_additionalParkingCost carRental)
       transferSaving = sum $ zipWith (\ transfers saving -> (sum transfers > 0) ? (saving, 0))
                                      a (_additionalTransferSaving carRental)      
   in  base - parkingFee + transferSaving
