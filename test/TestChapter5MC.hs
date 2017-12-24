@@ -104,7 +104,7 @@ doRacetrackTest :: Config -> IO ()
 doRacetrackTest config = do
   ([width, height]::[Int]) <- require config "racetrack.world"
   (discount::Double) <- require config "racetrack.discount"
-  (maxV::Double) <- require config "racetrack.maxVelocity"
+  (maxV::Int) <- require config "racetrack.maxVelocity"
   (actFailP::Double) <- require config "racetrack.actFailProb"
   (totalEpisodes::Int) <- require config "racetrack.totalEpisodes"
   let !racetrack = mkRacetrack (width, height) discount actFailP maxV
@@ -123,7 +123,7 @@ doRacetrackTest config = do
   loop pg count totalEpisode racetrack 
     | count >= totalEpisode = complete pg >> pure racetrack
     | otherwise = do
-      racetrack' <- fst <$> runStateT (racetrackStep count) racetrack
+      racetrack' <- fst <$> runStateT racetrackStep racetrack
       stat <- getProgressStats pg
       let ticked = fromInteger $ stCompleted stat
           percent = round $ (fromIntegral count) / (fromIntegral totalEpisode)

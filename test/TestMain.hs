@@ -1,6 +1,6 @@
 module Main where
 
-import TestChapter2Bandit
+-- import TestChapter2Bandit
 import TestChapter3MDP
 import TestChapter4DP
 import TestChapter5MC

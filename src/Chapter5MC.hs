@@ -21,7 +21,7 @@ import           Control.Monad.ST
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.State
 
-import           Control.Lens (makeLenses, over, element, (+~), (&), (.~), (%~))
+import           Control.Lens (makeLenses, over, element, elements, (+~), (&), (.~), (%~))
 import           Data.List(take, repeat)
 import           Data.Foldable (toList)
 import           Data.Maybe
@@ -200,22 +200,21 @@ genBehaviorEpisodeSeq :: StateT Racetrack IO [(RTState, RTAct, Double)]
 genBehaviorEpisodeSeq = do
   racetrack <- get
   startPos <- liftIO $ randomStartingPos racetrack 
-  a <- liftIO $ getRandomAct
+  a <- liftIO $ getRandomAct racetrack
   goUntilFinish racetrack (startPos, a)
   where
   goUntilFinish :: Racetrack -> (RTState, RTAct) 
                              -> StateT Racetrack IO [(RTState, RTAct, Double)]
   goUntilFinish racetrack (pos@((x,y),(hor,ver)), a@(aHor, aVer)) = do
     let theWorld = _world racetrack
-    
-  getRandomAct :: IO RTAct
-  getRandomAct = do
+    pure []    
+  getRandomAct :: Racetrack -> IO RTAct
+  getRandomAct racetrack = do
     idx <- sample (randomElement [0..(length (_acts racetrack) - 1)])
     pure (_acts racetrack !! idx)
       
-
 learningOneEpisode :: [(RTState, RTAct, Double)] -> StateT Racetrack IO Racetrack
-learningOneEpisode episodeSeq = get >> put
+learningOneEpisode episodeSeq = get >>= pure
   
 randomStartingPos :: Racetrack -> IO RTState
 randomStartingPos racetrack = do
@@ -270,15 +269,15 @@ genRaceWorld w h =
       part1Line = take w (unitBarrier ++ (concat . replicate 8 $ unitRoad)
                                       ++ (repeat $ negate 1))
       part1 = take fifthHeight $ repeat part1Line
-      part1' = map (element (w-1) ~. (negate 1)) part1
+      part1' = map (element (w-1) .~ (negate 1)) part1
       -- part2, head boundary increase
       part2 = take w (map (\x -> (unitBarrier ++ (replicate x (negate 1)) ++
                                  (concat $ replicate (fifthHeight*2 - x) unitRoad) ++
                                  (replicate w (negate 1))))
-                      [0..fifthHeight*2])
-      part2' = map (element (w-1) ~. (negate 1)) part2
+                          [0..fifthHeight*2])
+      part2' = map (element (w-1) .~ (negate 1)) part2
       -- part3, tail boundary increase
       part3 = reverse part2'
       world = take h ([worldStart'] ++ part1' ++ [barrierLine] ++ part2' ++ part3)
-      worldFinishLine = over (elelments (== (negate 1))) (const (negate 2)) (last world)
-  in  (element (h-1) ~. worldFinishLine) world
+      worldFinishLine = over (elements (== (negate 1))) (const (negate 2)) (last world)
+  in  (element (h-1) .~ worldFinishLine) world

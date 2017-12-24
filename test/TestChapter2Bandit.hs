@@ -158,7 +158,7 @@ oneBanditGo karm totalStep initValue stepSize policy = do
 -- drawings
 drawFigure2_1 :: Int -> IO ()
 drawFigure2_1 karm = do
-  kArmRVars <- map (flip normal 1.0) <$> generateRandomList karm stdNormal
+  kArmRVars::[RVar Double] <- map (flip normal 1.0) <$> generateRandomList karm stdNormal
   kArmDatas <- mapM (generateRandomList 200) kArmRVars
   let figure2_1 = mp % (violinplot kArmDatas @@ [o2 "showmeans" True, o2 "showmedians" True])
                      % xlabel "Action"
@@ -183,14 +183,16 @@ drawEpsilonGreedy config results = do
                        % xlabel "Step"
                        % ylabel "Average Reward"
                        % yticks [0.0, 0.2 .. 1.6]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
       !figureAction = bestActions                          
                        % title "Epsilon-Greedy Optimal Action Comparison"
                        % xlabel "Step"
                        % ylabel "Optiomal Actions"
                        % yticks [0.0::Double, 0.2 .. 1.0]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
                        % tightLayout
   --
@@ -215,14 +217,16 @@ drawUCB config results = do
                        % xlabel "Step"
                        % ylabel "Average Reward"
                        % yticks [0.0, 0.2 .. 1.6]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
       !figureAction = bestActions                          
                        % title "UCB Optimal Action Comparison"
                        % xlabel "Step"
                        % ylabel "Optiomal Actions"
                        % yticks [0.0::Double, 0.2 .. 1.0]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
                        % tightLayout
   --
@@ -248,14 +252,16 @@ drawGradient config results = do
                        % xlabel "Step"
                        % ylabel "Average Reward"
                        % yticks [0.0, 0.2 .. 1.6]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
       !figureAction = bestActions                          
                        % title "Gradient Optimal Action Comparison"
                        % xlabel "Step"
                        % ylabel "Optiomal Actions"
                        % yticks [0.0::Double, 0.2 .. 1.0]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
                        % tightLayout
   --
@@ -276,21 +282,22 @@ drawExperimentsCurves config (rewards, actions) = do
                        % xlabel "Step"
                        % ylabel "Average Reward"
                        % yticks [0.0, 0.2 .. 1.6]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
       !figureAction = actions                          
                        % title "Optimal Action Comparison"
                        % xlabel "Step"
                        % ylabel "Optiomal Actions"
                        % yticks [0.0::Double, 0.2 .. 1.0]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
                        % tightLayout
   --
   code figureReward >> code figureAction -- avoid Matplotlib's bug
   onscreen figureReward >> onscreen figureAction  
   threadDelay 1000000
-
 
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
@@ -351,7 +358,7 @@ drawFigure2_6 config = do
                       ) ucbParams
   let !ucbAverage = calcAverage 0 totalStep ucbResults
       !ucbAction = calcAverage totalStep totalStep ucbResults
-      ucbAverageCurve = mp % plot ucbExplore ucbAverage @@ [o2 "label" "UCB"]                                       
+      ucbAverageCurve = mp % plot ucbExplore ucbAverage @@ [o2 "label" "UCB"]
       ucbActionCurve = mp % plot ucbExplore ucbAction @@ [o2 "label" "UCB"]
 
   -- 4. gradient method with different alphas and all with baseline
@@ -375,7 +382,8 @@ drawFigure2_6 config = do
                        % xlabel "Paramter (2^x): e / Alpah / c / Q"
                        % ylabel "Average Reward"
                        % yticks [0.9, 0.1 .. 1.6]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True      
       !figureAction = eGreedyActionCurve
                        % gradientActionCurve
@@ -385,7 +393,8 @@ drawFigure2_6 config = do
                        % xlabel "Paramter (2^x): e / Alpah / c / Q"
                        % ylabel "Optiomal Actions"
                        % yticks [0.2::Double, 0.1 .. 1.0]
-                       % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "loc" "lower right"]
+                       % legend @@ [o2 "fancybox" True, 
+                                    o2 "shadow" True, o2 "loc" "lower right"]
                        % grid True
                        % tightLayout
   code figureReward >> code figureAction
