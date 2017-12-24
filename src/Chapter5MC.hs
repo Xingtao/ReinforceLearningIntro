@@ -161,14 +161,13 @@ data Racetrack = Racetrack {
     ,_actFailProb :: Double -- there are chances action won't take effect
     ,_maxVelocity :: Int -- max velocity for both horizon & vertical velocity
     ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
-    ,_qValues :: M.Map RTSA Double
-    ,_cValues :: M.Map RTSA Double
-    ,_bPolicy :: M.Map RTState [RTAct]
+    ,_qValueMap :: M.Map RTSA Double
+    ,_cValuesMap :: M.Map RTSA Double
     ,_states :: [RTState]   
     ,_acts :: [RTAct]   
     } deriving (Show)
 
-makeLenses'' Racetrack
+makeLenses ''Racetrack
 
 ------------------------------------------------------------------------------------------
 -- Init racetrack 
@@ -178,10 +177,10 @@ mkRacetrack (w, h) discount actFailP maxV =
       !allStates = genAllStates world w h maxV
       !allActs = [(aHor, aVer) | aHor <- [-1,0,1], aVer <- [-1,0,1]]
       !saPair = [(s,a) | s <- allStates, a <- allActs]
-  in  Racetrack world discount actFailP maxV  
-                (M.fromList (zip allStates $ head allActs) -- targetP 
-                (M.fromList (zip saPair [0.0]) -- Q(s,a)
-                (M.fromList (zip saPair [0.0]) -- C(s,a)
+  in  Racetrack world w h discount actFailP maxV  
+                (M.fromList (zip allStates . repeat $ head allActs)) -- targetP 
+                (M.fromList (zip saPair [0.0])) -- Q(s,a)
+                (M.fromList (zip saPair [0.0])) -- C(s,a)
                 allStates allActs
 
 -- generate all possible states, actions
@@ -190,35 +189,41 @@ genAllStates :: [[Int]] -> Int -> Int -> Int -> [RTState]
 genAllStates world w h maxV = 
   [((x,y), (hor,ver)) | x <- [0..w-1], y <- [0..h-1], 
                         hor <- [negate maxV, maxV], ver <- [negate maxV, maxV]]
-
+  
 ------------------------------------------------------------------------------------------
 -- step function
 racetrackStep :: StateT Racetrack IO Racetrack 
-racetrackStep = get >>= offMCOneEpisode >>= put
-
--- P91: Off-Policy MC control for estimating pi ~ pi*
-offMCOneEpisode :: Racetrack -> StateT Racetrack IO Racetrack
-offMCOneEpisode racetrack =
-  genBehaviorEpisodeSeq racetrack False >>= learningOneEpisode racetrack
+racetrackStep = genBehaviorEpisodeSeq >>= learningOneEpisode
 
 -- generate via random behavior policy
-genBehaviorEpisodeSeq :: Racetrack -> Bool -> IO [(RTState, RTAct, Double)]
-genBehaviorEpisodeSeq racetrack True = pure []
-genBehaviorEpisodeSeq racetrack False = do
-  startPos <- randomStartingPos racetrack 
-  randomActIdx <- liftIO $ sample (randomElement [0..(length (_acts racetrack) - 1)])
-  
-learningOneEpisode :: Racetrack -> IO Racetrack
-learningOneEpisode racetrack = do
-  
+genBehaviorEpisodeSeq :: StateT Racetrack IO [(RTState, RTAct, Double)]
+genBehaviorEpisodeSeq = do
+  racetrack <- get
+  startPos <- liftIO $ randomStartingPos racetrack 
+  a <- liftIO $ getRandomAct
+  goUntilFinish racetrack (startPos, a)
+  where
+  goUntilFinish :: Racetrack -> (RTState, RTAct) 
+                             -> StateT Racetrack IO [(RTState, RTAct, Double)]
+  goUntilFinish racetrack (pos@((x,y),(hor,ver)), a@(aHor, aVer)) = do
+    let theWorld = _world racetrack
+    
+  getRandomAct :: IO RTAct
+  getRandomAct = do
+    idx <- sample (randomElement [0..(length (_acts racetrack) - 1)])
+    pure (_acts racetrack !! idx)
+      
 
+learningOneEpisode :: [(RTState, RTAct, Double)] -> StateT Racetrack IO Racetrack
+learningOneEpisode episodeSeq = get >> put
+  
 randomStartingPos :: Racetrack -> IO RTState
 randomStartingPos racetrack = do
   let theWorld = _world racetrack
       startings = filter (\ ((x, y), (hor, ver)) -> 
                             x == 0 && (theWorld !! x !! y == 0) && hor == 0 && ver == 0) 
                          (_states racetrack)
-  randomIdx <- liftIO $ sample (randomElement [0..(length startings - 1)])
+  randomIdx <- sample (randomElement [0..(length startings - 1)])
   pure (startings !! randomIdx)
     
 ------------------------------------------------------------------------------------------
@@ -251,7 +256,7 @@ randomStartingPos racetrack = do
 -}
 
 genRaceWorld :: Int -> Int -> [[Int]]
-genRaceWorld w h = do  
+genRaceWorld w h =  
   let tenthWidth = w `div` 10
       fifthHeight = w `div` 10      
       unitBarrier = replicate tenthWidth (negate 1)
