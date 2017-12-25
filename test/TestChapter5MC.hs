@@ -108,25 +108,16 @@ doRacetrackTest config = do
   (actFailP::Double) <- require config "racetrack.actFailProb"
   (totalEpisodes::Int) <- require config "racetrack.totalEpisodes"
   let !racetrack = mkRacetrack (width, height) discount actFailP maxV
+  print (_world racetrack)
   -- do experiments
-  displayConsoleRegions $ do
-    putStrLn "Will do racetrack experiment "
-    pg <- newProgressBar def { pgWidth = 80
-                             , pgTotal = 100
-                             , pgOnCompletion = Just "Done :percent after :elapsed seconds"
-                             }
-    racetrack' <- loop pg 1 totalEpisodes racetrack
-    putStrLn "racetrack experiment finish. Final Results: "
-    putStrLn $ show racetrack'
+  racetrack' <- loop 0 totalEpisodes racetrack
+  putStrLn "racetrack experiment finish. Final Results: "
+    -- putStrLn $ show (_piPolicy racetrack')
   threadDelay 100000
   where
-  loop pg count totalEpisode racetrack 
-    | count >= totalEpisode = complete pg >> pure racetrack
+  loop count totalEpisode racetrack 
+    | count >= totalEpisode = pure racetrack
     | otherwise = do
+      putStrLn ("Episode " ++ show count)
       racetrack' <- fst <$> runStateT racetrackStep racetrack
-      stat <- getProgressStats pg
-      let ticked = fromInteger $ stCompleted stat
-          percent = round $ (fromIntegral count) / (fromIntegral totalEpisode)
-          willTick = percent - ticked
-      tickN pg willTick
-      loop pg (count + 1) totalEpisode racetrack'
+      loop (count + 1) totalEpisode racetrack'

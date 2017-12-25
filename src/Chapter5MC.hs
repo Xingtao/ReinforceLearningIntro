@@ -188,7 +188,8 @@ mkRacetrack (w, h) discount actFailP maxV =
 genAllStates :: [[Int]] -> Int -> Int -> Int -> [RTState]
 genAllStates world w h maxV = 
   [((x,y), (hor,ver)) | x <- [0..w-1], y <- [0..h-1], 
-                        hor <- [negate maxV, maxV], ver <- [negate maxV, maxV]]
+                        hor <- [(negate maxV)..maxV], ver <- [(negate maxV)..maxV],
+                        world!!y!!x >= 0]
   
 ------------------------------------------------------------------------------------------
 -- step function
@@ -199,7 +200,7 @@ racetrackStep = genBehaviorEpisodeSeq >>= learningOneEpisode
 genBehaviorEpisodeSeq :: StateT Racetrack IO [(RTState, RTAct, Double)]
 genBehaviorEpisodeSeq = do
   racetrack <- get
-  startPos <- liftIO $ randomStartingPos racetrack 
+  startPos <- liftIO $ randomStartingPos racetrack
   a <- liftIO $ getRandomAct racetrack
   goUntilFinish racetrack (startPos, a)
   where
@@ -207,7 +208,7 @@ genBehaviorEpisodeSeq = do
                              -> StateT Racetrack IO [(RTState, RTAct, Double)]
   goUntilFinish racetrack (pos@((x,y),(hor,ver)), a@(aHor, aVer)) = do
     let theWorld = _world racetrack
-    pure []    
+    pure []
   getRandomAct :: Racetrack -> IO RTAct
   getRandomAct racetrack = do
     idx <- sample (randomElement [0..(length (_acts racetrack) - 1)])
@@ -216,11 +217,15 @@ genBehaviorEpisodeSeq = do
 learningOneEpisode :: [(RTState, RTAct, Double)] -> StateT Racetrack IO Racetrack
 learningOneEpisode episodeSeq = get >>= pure
   
+
+------------------------------------------------------------------------------------------
+-- learning helpers
+
 randomStartingPos :: Racetrack -> IO RTState
 randomStartingPos racetrack = do
   let theWorld = _world racetrack
-      startings = filter (\ ((x, y), (hor, ver)) -> 
-                            x == 0 && (theWorld !! x !! y == 0) && hor == 0 && ver == 0) 
+  let startings = filter (\ ((x, y), (hor, ver)) ->
+                            y == 0 && (theWorld !! y !! x == 0) && hor == 0 && ver == 0) 
                          (_states racetrack)
   randomIdx <- sample (randomElement [0..(length startings - 1)])
   pure (startings !! randomIdx)
@@ -257,9 +262,9 @@ randomStartingPos racetrack = do
 genRaceWorld :: Int -> Int -> [[Int]]
 genRaceWorld w h =  
   let tenthWidth = w `div` 10
-      fifthHeight = w `div` 10      
+      fifthHeight = h `div` 5
       unitBarrier = replicate tenthWidth (negate 1)
-      unitRoad = replicate tenthWidth 1
+      unitRoad = replicate tenthWidth 4
       -- 0 startings, -1 boundaries, -2 ends, > 0 is road
       worldStart = over (elements (< (w `div` 4))) (const (negate 1)) .
                    over (elements (> (w `div` 2))) (const (negate 1)) . take w $ [0..]
@@ -270,14 +275,17 @@ genRaceWorld w h =
                                       ++ (repeat $ negate 1))
       part1 = take fifthHeight $ repeat part1Line
       part1' = map (element (w-1) .~ (negate 1)) part1
+      part1'' = [worldStart'] ++ part1' ++ [barrierLine]
+      part1Len = length part1''
+      part2Len = ((h - part1Len) `div` 2) + 1
       -- part2, head boundary increase
-      part2 = take w (map (\x -> (unitBarrier ++ (replicate x (negate 1)) ++
-                                 (concat $ replicate (fifthHeight*2 - x) unitRoad) ++
-                                 (replicate w (negate 1))))
-                          [0..fifthHeight*2])
-      part2' = map (element (w-1) .~ (negate 1)) part2
+      part2 = map (\x -> take w (unitBarrier ++ (replicate x (negate 1)) ++
+                                    (concat $ replicate (fifthHeight*2 - x + 1) unitRoad) ++
+                                    (replicate w (negate 1))))
+                  [0..fifthHeight*2]
+      part2' = map (element (w-1) .~ (negate 1)) $ drop (length part2 - part2Len) part2
       -- part3, tail boundary increase
       part3 = reverse part2'
-      world = take h ([worldStart'] ++ part1' ++ [barrierLine] ++ part2' ++ part3)
-      worldFinishLine = over (elements (== (negate 1))) (const (negate 2)) (last world)
-  in  (element (h-1) .~ worldFinishLine) world
+      !theWorld = take (h-1) (part1'' ++ part2' ++ part3)
+      !worldFinishLine = map (\x -> (x > 0) ? (100, x)) (last theWorld)
+  in  theWorld ++ [worldFinishLine]
