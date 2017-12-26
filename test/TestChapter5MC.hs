@@ -108,11 +108,11 @@ doRacetrackTest config = do
   (actFailP::Double) <- require config "racetrack.actFailProb"
   (totalEpisodes::Int) <- require config "racetrack.totalEpisodes"
   let !racetrack = mkRacetrack (width, height) discount actFailP maxV
-  print (_world racetrack)
+  print (_world racetrack)  
   -- do experiments
   racetrack' <- loop 0 totalEpisodes racetrack
   putStrLn "racetrack experiment finish. Final Results: "
-    -- putStrLn $ show (_piPolicy racetrack')
+  drawOneRacetrack racetrack'
   threadDelay 100000
   where
   loop count totalEpisode racetrack 

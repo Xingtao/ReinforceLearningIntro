@@ -14,6 +14,7 @@ module Chapter5MC
     , blackjackStep
     , mkRacetrack
     , racetrackStep
+    , drawOneRacetrack
     ) where
 
 import           Control.Monad
@@ -178,8 +179,8 @@ mkRacetrack (w, h) discount actFailP maxV =
       !saPair = [(s,a) | s <- allStates, a <- allActs]
   in  Racetrack world w h discount actFailP maxV  
                 (M.fromList (zip allStates . repeat $ head allActs)) -- targetP 
-                (M.fromList (zip saPair [0.0])) -- Q(s,a)
-                (M.fromList (zip saPair [0.0])) -- C(s,a)
+                (M.fromList (zip saPair $ repeat 0.0)) -- Q(s,a)
+                (M.fromList (zip saPair $ repeat 0.0)) -- C(s,a)
                 allStates allActs
 
 -- generate all possible states, actions
@@ -193,69 +194,72 @@ genAllStates world w h maxV =
 ------------------------------------------------------------------------------------------
 -- step function
 racetrackStep :: StateT Racetrack IO Racetrack 
-racetrackStep = genBehaviorEpisodeSeq >>= (\ x -> learningOneEpisode (reverse x) 0.0 1.0)
+racetrackStep = genOneEpisode True >>= (\ x -> learningOneEpisode (reverse x) 0.0 1.0)
 
 -- generate via random behavior policy
-genBehaviorEpisodeSeq :: StateT Racetrack IO [(RTState, RTAct, Double)]
-genBehaviorEpisodeSeq = do
+genOneEpisode :: Bool -> StateT Racetrack IO [(RTState, RTAct, Double)]
+genOneEpisode bTraining = do
   racetrack <- get
-  startPos <- liftIO $ randomStartingPos racetrack
-  a <- liftIO $ getRandomAct racetrack (0, 0)
-  goUntilFinish racetrack startPos a
+  startState <- liftIO $ randomStartingPos racetrack
+  startAct <- liftIO $ getAction bTraining racetrack startState
+  goUntilFinish racetrack startState startAct
   where
   goUntilFinish :: Racetrack -> RTState -> RTAct
                              -> StateT Racetrack IO [(RTState, RTAct, Double)]
   goUntilFinish racetrack s a = do  
-    s'@((_, y), v) <- liftIO $ nextPosVelocity racetrack s a
+    s'@((_, y), v) <- liftIO $ nextState bTraining racetrack s a
     if y == (_wh racetrack) - 1 
        then pure [(s, a, 1.0)] -- finish episode
        else do
-         a' <- liftIO $ getRandomAct racetrack v
+         a' <- liftIO $ getAction bTraining racetrack s'
          ((s, a, 0.0) :) <$> goUntilFinish racetrack s' a'
 
-nextPosVelocity :: Racetrack -> RTState -> RTAct -> IO RTState
-nextPosVelocity racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
-  let theWorld = _world racetrack
-      x' = x + hor + aHor
-      y' = y + ver + aVer
+nextState :: Bool -> Racetrack -> RTState -> RTAct -> IO RTState
+nextState bTraing racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
+  bFail <- headOrTail (_actFailProb racetrack)
+  let aHor' = (bFail && bTraing) ? (0, aHor)
+      aVer' = (bFail && bTraing) ? (0, aVer)
+      theWorld = _world racetrack
+      x' = x + hor + aHor'
+      y' = y + ver + aVer'
       yFinish = _wh racetrack -1
   case x' < 0 || x' >= _ww racetrack || y' < 0 of
     True -> randomStartingPos racetrack
     False -> do
       case y' >= yFinish && (theWorld!!yFinish!!x' == 100) of
-        True -> pure ((x', yFinish), (hor + aHor, ver + aVer))
+        True -> pure ((x', yFinish), (hor + aHor', ver + aVer'))
         False ->
           case y' >= yFinish of
             True -> randomStartingPos racetrack
             False ->
               case theWorld!!y'!!x' < 0 of
                 True -> randomStartingPos racetrack
-                False -> pure ((x', y'), (hor + aHor, ver + aVer)) 
+                False -> pure ((x', y'), (hor + aHor', ver + aVer'))
     
 learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double -> StateT Racetrack IO Racetrack
 learningOneEpisode [] _ _ = get >>= pure
 learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
   racetrack <- get
-  let g' = r + (_gamma racetrack)*g
-      c = fromJust $ M.lookup (s,a) (_cValuesMap racetrack)
-      q = fromJust $ M.lookup (s,a) (_qValuesMap racetrack)
-      c' = c + w -- C_n+1 = C_n + W_n+1
-      q' = q + w/c'*(g'-q) -- Q_n+1 = Q_n + W_n+1/C_n+1*(G_n - Q_n)
-      cMap = M.adjust (const c') (s,a) (_cValuesMap racetrack)
-      qMap = M.adjust (const q') (s,a) (_qValuesMap racetrack)      
-      qs = filter (\ (x, _) -> x == s) $ M.keys qMap
-      (_, a') = argmax (fromJust . flip M.lookup qMap) qs
-      piMap = M.adjust (const a') s (_piPolicy racetrack)
+  let !g' = r + (_gamma racetrack)*g
+      !c = fromJust $ M.lookup (s,a) (_cValuesMap racetrack)
+      !q = fromJust $ M.lookup (s,a) (_qValuesMap racetrack)
+      !c' = c + w -- C_n+1 = C_n + W_n+1
+      !q' = q + w/c'*(g'- q) -- Q_n+1 = Q_n + W_n+1/C_n+1*(G_n - Q_n)
+      !cMap = M.adjust (const c') (s,a) (_cValuesMap racetrack)
+      !qMap = M.adjust (const q') (s,a) (_qValuesMap racetrack)      
+      !qs = filter (\ (x, _) -> x == s) $ M.keys qMap
+      (s', a') = argmax (fromJust . flip M.lookup qMap) qs
+      !piMap = M.adjust (const a') s' (_piPolicy racetrack)
+      !racetrack' = racetrack & (piPolicy .~ piMap)
+                              & (qValuesMap .~ qMap)
+                              & (cValuesMap .~ cMap)
+  put racetrack'
   case a == a' of
-    False -> pure racetrack
+    False -> pure racetrack'
     True -> do
-      let racetrack' = racetrack & (piPolicy .~ piMap)
-                                 & (qValuesMap .~ qMap)
-                                 & (cValuesMap .~ cMap)
-          w' = w * (fromIntegral (length $ getSensableActs racetrack a))
-      put racetrack'
+      let w' = w * (fromIntegral (length $ getSensableActs racetrack v))
       learningOneEpisode ss g' w'
-  
+
 ------------------------------------------------------------------------------------------
 -- learning helpers
 -- get sensable act with actFail probability
@@ -267,12 +271,11 @@ getSensableActs racetrack (hor, ver) =
                                (aVer + ver >= negate maxV)
              ) (_acts racetrack)
 
-getRandomAct :: Racetrack -> (Int, Int) -> IO RTAct
-getRandomAct racetrack v = do
-  bFail <- headOrTail (_actFailProb racetrack)
-  case bFail of
-    True -> pure (0, 0)
-    False -> do
+getAction :: Bool -> Racetrack -> RTState -> IO RTAct
+getAction bTraing racetrack s@(p, v) = do
+  case bTraing of
+    False -> pure . fromJust $ M.lookup s (_piPolicy racetrack)
+    True -> do
       let senseActs = getSensableActs racetrack v
       case null senseActs of 
          True -> pure (0, 0)
@@ -348,3 +351,6 @@ genRaceWorld w h =
       !theWorld = take (h-1) (part1'' ++ part2' ++ part3)
       !worldFinishLine = map (\x -> (x > 0) ? (100, x)) (last theWorld)
   in  theWorld ++ [worldFinishLine]
+
+drawOneRacetrack :: Racetrack -> IO ()
+drawOneRacetrack racetrack = runStateT (genOneEpisode False) racetrack >>= print  
