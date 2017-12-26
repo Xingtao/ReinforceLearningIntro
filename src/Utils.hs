@@ -19,13 +19,17 @@ generateRandomList quatity rvar = go 0
   go count | count >= quatity = pure []
            | otherwise = sample rvar >>= \ x -> (x:) <$> go (count + 1)
 
--- | index with max value in a list
-argmaxWithIndex :: (Ord a) => [(Int, a)] -> (Int, a)
-argmaxWithIndex = maximumBy (comparing snd)
-
 -- | handy operator
 (?) :: Bool -> (a, a) -> a
 (?) bTrue (x, y) = if bTrue then x else y
+
+factorial :: Integral a => a -> a
+factorial n | n <= 0 = 1
+            | otherwise = n * factorial (n-1)
+
+-- | index with max value in a list
+maxWithIndex :: (Ord a) => [(Int, a)] -> (Int, a)
+maxWithIndex = maximumBy (comparing snd)
 
 -- | Get max element by index of two list
 maxElement :: (Ord a) => [a] -> [a] -> [a]
@@ -34,9 +38,9 @@ maxElement = zipWith (\ x y -> (x > y) ? (x, y))
 minElement :: (Ord a) => [a] -> [a] -> [a]
 minElement = zipWith (\ x y -> (x <= y) ? (x, y))
 
-factorial :: Integral a => a -> a
-factorial n | n <= 0 = 1
-            | otherwise = n * factorial (n-1)
+-- | argmax for a list of arguments
+argmax :: (Ord b) => (a -> b) -> [a] -> a
+argmax f xs = foldl' 
 
 {-
 import System.Random

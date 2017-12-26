@@ -225,7 +225,7 @@ policyImprovement carRental = do
         Seq.zipWith3 (\ idx s as -> fmap (caclOneActionValue carRental idx s) as)
                      (Seq.fromList [0..(length $ _states carRental) - 1])
                      (_states carRental) (_possibleActions carRental)
-      newActions = fmap (fst . argmaxWithIndex . zip [0..] . toList) actionReturns
+      newActions = fmap (fst . maxWithIndex . zip [0..] . toList) actionReturns
       diffs = toList $ Seq.zipWith (-) oldActions newActions
       percent = round (  ((100.0 *) . fromIntegral . length $ filter (== 0) diffs)
                        / (fromIntegral $ length newActions))
@@ -286,7 +286,7 @@ runValueIteration gambler = runST $ do
                        loseVal <- VUM.read mutStateVals (index - act)
                        pure $ (headProb gambler) * winVal + (1.0 - headProb gambler) * loseVal
                     ) possibleActions
-    let (a, v) = argmaxWithIndex (zip [0..] returns)
+    let (a, v) = maxWithIndex (zip [0..] returns)
     VUM.write mutStateVals index v
     VUM.write mutActVlas index a
     pure (mutStateVals, mutActVlas)  

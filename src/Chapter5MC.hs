@@ -194,7 +194,7 @@ genAllStates world w h maxV =
 ------------------------------------------------------------------------------------------
 -- step function
 racetrackStep :: StateT Racetrack IO Racetrack 
-racetrackStep = genBehaviorEpisodeSeq >>= learningOneEpisode
+racetrackStep = genBehaviorEpisodeSeq >>= (\ x -> learningOneEpisode (reverse x) 0.0 1.0)
 
 -- generate via random behavior policy
 genBehaviorEpisodeSeq :: StateT Racetrack IO [(RTState, RTAct, Double)]
@@ -207,15 +207,15 @@ genBehaviorEpisodeSeq = do
   goUntilFinish :: Racetrack -> RTState -> RTAct
                              -> StateT Racetrack IO [(RTState, RTAct, Double)]
   goUntilFinish racetrack s a = do  
-    s'@((_, y), v) <- liftIO $ netPosVelocity racetrack s a
+    s'@((_, y), v) <- liftIO $ nextPosVelocity racetrack s a
     if y == (_wh racetrack) - 1 
        then pure [(s, a, 1.0)] -- finish episode
        else do
          a' <- liftIO $ getRandomAct racetrack v
          ((s, a, 0.0) :) <$> goUntilFinish racetrack s' a'
 
-netPosVelocity :: Racetrack -> RTState -> RTAct -> IO RTState
-netPosVelocity racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
+nextPosVelocity :: Racetrack -> RTState -> RTAct -> IO RTState
+nextPosVelocity racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
   let theWorld = _world racetrack
       x' = x + hor + aHor
       y' = y + ver + aVer
@@ -223,14 +223,36 @@ netPosVelocity racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
   case x' < 0 || x' >= _ww racetrack || y' < 0 of
     True -> randomStartingPos racetrack
     False -> do
-      case y' >= yFinish && (theWorld!!yFinish!!x == 100) of
+      case y' >= yFinish && (theWorld!!yFinish!!x' == 100) of
         True -> pure ((x', yFinish), (hor + aHor, ver + aVer))
-        False -> case y' >= yFinish of
-                   True -> randomStartingPos racetrack
-                   False -> pure ((x', y'), (hor + aHor, ver + aVer)) 
+        False ->
+          case y' >= yFinish of
+            True -> randomStartingPos racetrack
+            False ->
+              case theWorld!!y'!!x' < 0 of
+                True -> randomStartingPos racetrack
+                False -> pure ((x', y'), (hor + aHor, ver + aVer)) 
     
-learningOneEpisode :: [(RTState, RTAct, Double)] -> StateT Racetrack IO Racetrack
-learningOneEpisode episodeSeq = get >>= pure
+learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double -> StateT Racetrack IO Racetrack
+learningOneEpisode [] _ _ = get >>= put
+learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
+  racetrack <- get
+  let g' = r + (_gamma racetrack)*g
+      c = fromJust $ M.lookup s (_cValuesMap racetrack)
+      q = fromJust $ M.lookup (s,a) (_qValuesMap racetrack)
+      c' = c + w -- C_n+1 = C_n + W_n+1
+      q' = q + w/c'*(g'-q) -- Q_n+1 = Q_n + W_n+1/C_n+1*(G_n - Q_n)
+      qKeys = M.keys (_qValuesMap racetrack)
+      qS = filter (\ (x, _) -> x == s) qKeys
+      
+  put racetrack'
+  learningOneEpisode ss
+
+    ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
+    ,_qValueMap :: M.Map RTSA Double
+    ,_cValuesMap :: M.Map RTSA Double
+  where
+  updateQ :: M.Map RTSA Double -> Double -> Double -> RTSA -> Double -> M.Map RTSA Double
   
 ------------------------------------------------------------------------------------------
 -- learning helpers

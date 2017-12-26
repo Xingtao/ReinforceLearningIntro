@@ -81,7 +81,7 @@ makeLenses ''Bandit
 
 mkBandit :: Int -> Int -> Double -> Double -> [Double] -> Policy -> Bandit
 mkBandit karm totalStep initValue stepSize trueValues policy = 
-  let (maxValueIdx, _) = argmaxWithIndex (zip [0..] trueValues)
+  let (maxValueIdx, _) = maxWithIndex (zip [0..] trueValues)
   in  (Bandit karm maxValueIdx (take karm $ repeat initValue) 
               (take karm $ repeat 0) stepSize 0.0 0 []
               (map (flip normal 1.0) trueValues) policy
@@ -103,10 +103,10 @@ selectOneAction = do
     EGreedy epsilonRVar -> do
       bExplore <- liftIO $ sample epsilonRVar
       if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
-         else pure . fst . argmaxWithIndex $ (zip [0..] (_qValues bandit))
+         else pure . fst . maxWithIndex $ (zip [0..] (_qValues bandit))
     UCB c -> do
       let !ucbEstValues = zipWith (calcUCB (_curStep bandit)) (_nActions bandit) (_qValues bandit)
-      pure $ fst $ argmaxWithIndex (zip [0..] ucbEstValues)
+      pure $ fst $ maxWithIndex (zip [0..] ucbEstValues)
     Gradient _ -> do
       let gradientValues = map exp (_qValues bandit)
           gradientProbs = map ( / sum gradientValues) gradientValues
@@ -115,7 +115,7 @@ selectOneAction = do
           -- Is it because we do weighted random extract twice ?
           weightedRVar = weightedShuffle $ zip gradientProbs [0..]
       liftIO $ head <$> sample weightedRVar
-      -- pure $ fst $ argmaxWithIndex (zip [0..] gradientProbs)
+      -- pure $ fst $ maxWithIndex (zip [0..] gradientProbs)
   pure actionN
   where
   calcUCB :: Int -> Int -> Double -> Double
