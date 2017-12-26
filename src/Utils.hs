@@ -40,7 +40,8 @@ minElement = zipWith (\ x y -> (x <= y) ? (x, y))
 
 -- | argmax for a list of arguments
 argmax :: (Ord b) => (a -> b) -> [a] -> a
-argmax f xs = foldl' 
+argmax f []= error $ "'argmax' with empty list input"
+argmax f (x:xs) = foldl' cmp x xs where cmp x y = (f x > f y) ? (x, y)
 
 {-
 import System.Random

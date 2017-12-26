@@ -39,8 +39,7 @@ import           Debug.Trace
 import           Utils
 
 ------------------------------------------------------------------------------------------
--- | Monte Carlo Method Experiment: Blackjack
---   Will implement: MonteCarlo-E-Soft (On-Policy)
+-- | Monte Carlo Method Experiment: Blackjack E-Soft (On-Policy)
 
 data BJAct = Hit | Stick deriving (Show, Ord, Eq)
 -- ((sum, dealer's one card, usable ace), act)
@@ -161,7 +160,7 @@ data Racetrack = Racetrack {
     ,_actFailProb :: Double -- there are chances action won't take effect
     ,_maxVelocity :: Int -- max velocity for both horizon & vertical velocity
     ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
-    ,_qValueMap :: M.Map RTSA Double
+    ,_qValuesMap :: M.Map RTSA Double
     ,_cValuesMap :: M.Map RTSA Double
     ,_states :: [RTState]   
     ,_acts :: [RTAct]   
@@ -234,40 +233,47 @@ nextPosVelocity racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
                 False -> pure ((x', y'), (hor + aHor, ver + aVer)) 
     
 learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double -> StateT Racetrack IO Racetrack
-learningOneEpisode [] _ _ = get >>= put
+learningOneEpisode [] _ _ = get >>= pure
 learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
   racetrack <- get
   let g' = r + (_gamma racetrack)*g
-      c = fromJust $ M.lookup s (_cValuesMap racetrack)
+      c = fromJust $ M.lookup (s,a) (_cValuesMap racetrack)
       q = fromJust $ M.lookup (s,a) (_qValuesMap racetrack)
       c' = c + w -- C_n+1 = C_n + W_n+1
       q' = q + w/c'*(g'-q) -- Q_n+1 = Q_n + W_n+1/C_n+1*(G_n - Q_n)
-      qKeys = M.keys (_qValuesMap racetrack)
-      qS = filter (\ (x, _) -> x == s) qKeys
-      
-  put racetrack'
-  learningOneEpisode ss
-
-    ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
-    ,_qValueMap :: M.Map RTSA Double
-    ,_cValuesMap :: M.Map RTSA Double
-  where
-  updateQ :: M.Map RTSA Double -> Double -> Double -> RTSA -> Double -> M.Map RTSA Double
+      cMap = M.adjust (const c') (s,a) (_cValuesMap racetrack)
+      qMap = M.adjust (const q') (s,a) (_qValuesMap racetrack)      
+      qs = filter (\ (x, _) -> x == s) $ M.keys qMap
+      (_, a') = argmax (fromJust . flip M.lookup qMap) qs
+      piMap = M.adjust (const a') s (_piPolicy racetrack)
+  case a == a' of
+    False -> pure racetrack
+    True -> do
+      let racetrack' = racetrack & (piPolicy .~ piMap)
+                                 & (qValuesMap .~ qMap)
+                                 & (cValuesMap .~ cMap)
+          w' = w * (fromIntegral (length $ getSensableActs racetrack a))
+      put racetrack'
+      learningOneEpisode ss g' w'
   
 ------------------------------------------------------------------------------------------
 -- learning helpers
--- get sensable act with actFail probability    
+-- get sensable act with actFail probability
+getSensableActs :: Racetrack -> (Int, Int) -> [RTAct]
+getSensableActs racetrack (hor, ver) =
+  let maxV = _maxVelocity racetrack
+  in  filter (\(aHor, aVer) -> (aHor + hor >= negate maxV) &&
+                               (aHor + hor <= maxV) && (aVer + ver <= maxV) &&
+                               (aVer + ver >= negate maxV)
+             ) (_acts racetrack)
+
 getRandomAct :: Racetrack -> (Int, Int) -> IO RTAct
-getRandomAct racetrack (hor, ver) = do
+getRandomAct racetrack v = do
   bFail <- headOrTail (_actFailProb racetrack)
   case bFail of
     True -> pure (0, 0)
     False -> do
-      let maxV = _maxVelocity racetrack
-          senseActs = filter (\(aHor, aVer) -> (aHor + hor >= negate maxV) &&
-                                               (aHor + hor <= maxV) && (aVer + ver <= maxV) &&
-                                               (aVer + ver >= negate maxV)
-                             ) (_acts racetrack)
+      let senseActs = getSensableActs racetrack v
       case null senseActs of 
          True -> pure (0, 0)
          False -> do
