@@ -201,35 +201,66 @@ genBehaviorEpisodeSeq :: StateT Racetrack IO [(RTState, RTAct, Double)]
 genBehaviorEpisodeSeq = do
   racetrack <- get
   startPos <- liftIO $ randomStartingPos racetrack
-  a <- liftIO $ getRandomAct racetrack
-  goUntilFinish racetrack (startPos, a)
+  a <- liftIO $ getRandomAct racetrack (0, 0)
+  goUntilFinish racetrack startPos a
   where
-  goUntilFinish :: Racetrack -> (RTState, RTAct) 
+  goUntilFinish :: Racetrack -> RTState -> RTAct
                              -> StateT Racetrack IO [(RTState, RTAct, Double)]
-  goUntilFinish racetrack (pos@((x,y),(hor,ver)), a@(aHor, aVer)) = do
-    let theWorld = _world racetrack
-    pure []
-  getRandomAct :: Racetrack -> IO RTAct
-  getRandomAct racetrack = do
-    idx <- sample (randomElement [0..(length (_acts racetrack) - 1)])
-    pure (_acts racetrack !! idx)
-      
+  goUntilFinish racetrack s a = do  
+    s'@((_, y), v) <- liftIO $ netPosVelocity racetrack s a
+    if y == (_wh racetrack) - 1 
+       then pure [(s, a, 1.0)] -- finish episode
+       else do
+         a' <- liftIO $ getRandomAct racetrack v
+         ((s, a, 0.0) :) <$> goUntilFinish racetrack s' a'
+
+netPosVelocity :: Racetrack -> RTState -> RTAct -> IO RTState
+netPosVelocity racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
+  let theWorld = _world racetrack
+      x' = x + hor + aHor
+      y' = y + ver + aVer
+      yFinish = _wh racetrack -1
+  case x' < 0 || x' >= _ww racetrack || y' < 0 of
+    True -> randomStartingPos racetrack
+    False -> do
+      case y' >= yFinish && (theWorld!!yFinish!!x == 100) of
+        True -> pure ((x', yFinish), (hor + aHor, ver + aVer))
+        False -> case y' >= yFinish of
+                   True -> randomStartingPos racetrack
+                   False -> pure ((x', y'), (hor + aHor, ver + aVer)) 
+    
 learningOneEpisode :: [(RTState, RTAct, Double)] -> StateT Racetrack IO Racetrack
 learningOneEpisode episodeSeq = get >>= pure
   
-
 ------------------------------------------------------------------------------------------
 -- learning helpers
+-- get sensable act with actFail probability    
+getRandomAct :: Racetrack -> (Int, Int) -> IO RTAct
+getRandomAct racetrack (hor, ver) = do
+  bFail <- headOrTail (_actFailProb racetrack)
+  case bFail of
+    True -> pure (0, 0)
+    False -> do
+      let maxV = _maxVelocity racetrack
+          senseActs = filter (\(aHor, aVer) -> (aHor + hor >= negate maxV) &&
+                                               (aHor + hor <= maxV) && (aVer + ver <= maxV) &&
+                                               (aVer + ver >= negate maxV)
+                             ) (_acts racetrack)
+      case null senseActs of 
+         True -> pure (0, 0)
+         False -> do
+           idx <- sample (randomElement [0..(length senseActs - 1)])
+           pure (senseActs !! idx)
 
 randomStartingPos :: Racetrack -> IO RTState
 randomStartingPos racetrack = do
   let theWorld = _world racetrack
   let startings = filter (\ ((x, y), (hor, ver)) ->
-                            y == 0 && (theWorld !! y !! x == 0) && hor == 0 && ver == 0) 
-                         (_states racetrack)
+                            y == 0 && (theWorld !! y !! x == 0) && hor == 0 && ver == 0 
+                         ) (_states racetrack)
   randomIdx <- sample (randomElement [0..(length startings - 1)])
   pure (startings !! randomIdx)
-    
+
 ------------------------------------------------------------------------------------------
 {- the world: '=' boundary, '.' starting, '|' is end
    it roughly has the following shape
