@@ -110,9 +110,10 @@ doRacetrackTest config = do
   let !racetrack = mkRacetrack (width, height) discount actFailP maxV
   print (_world racetrack)  
   -- do experiments
-  racetrack' <- loop 0 totalEpisodes racetrack
-  putStrLn "racetrack experiment finish. Final Results: "
+  !racetrack' <- loop 0 totalEpisodes racetrack
+  putStrLn "racetrack experiment finish. "
   drawOneRacetrack racetrack'
+  -- putStrLn (show $ _piPolicy racetrack)
   threadDelay 100000
   where
   loop count totalEpisode racetrack 

@@ -206,23 +206,24 @@ genOneEpisode bTraining = do
   where
   goUntilFinish :: Racetrack -> RTState -> RTAct
                              -> StateT Racetrack IO [(RTState, RTAct, Double)]
-  goUntilFinish racetrack s a = do  
-    s'@((_, y), v) <- liftIO $ nextState bTraining racetrack s a
+  goUntilFinish racetrack s a = do
+    s'@((_, y), _) <- liftIO $ nextState bTraining racetrack s a
     if y == (_wh racetrack) - 1 
-       then pure [(s, a, 1.0)] -- finish episode
+       then pure [(s, a, 0.0)] -- finish episode
        else do
          a' <- liftIO $ getAction bTraining racetrack s'
-         ((s, a, 0.0) :) <$> goUntilFinish racetrack s' a'
+         when (bTraining == False) (liftIO (print s >> print a >> print s'))
+         ((s, a, negate 1.0) :) <$> goUntilFinish racetrack s' a'
 
 nextState :: Bool -> Racetrack -> RTState -> RTAct -> IO RTState
 nextState bTraing racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
   bFail <- headOrTail (_actFailProb racetrack)
-  let aHor' = (bFail && bTraing) ? (0, aHor)
-      aVer' = (bFail && bTraing) ? (0, aVer)
-      theWorld = _world racetrack
-      x' = x + hor + aHor'
-      y' = y + ver + aVer'
-      yFinish = _wh racetrack -1
+  let !aHor' = (bFail && bTraing) ? (0, aHor)
+      !aVer' = (bFail && bTraing) ? (0, aVer)
+      !theWorld = _world racetrack
+      !x' = x + hor + aHor'
+      !y' = y + ver + aVer'
+      !yFinish = _wh racetrack -1
   case x' < 0 || x' >= _ww racetrack || y' < 0 of
     True -> randomStartingPos racetrack
     False -> do
@@ -234,9 +235,12 @@ nextState bTraing racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
             False ->
               case theWorld!!y'!!x' < 0 of
                 True -> randomStartingPos racetrack
-                False -> pure ((x', y'), (hor + aHor', ver + aVer'))
+                False -> do
+                  when (bTraing == False) (print [x, y, x', y', hor, ver, aHor', aVer'])
+                  pure ((x', y'), (hor + aHor', ver + aVer'))
     
-learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double -> StateT Racetrack IO Racetrack
+learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double 
+                                                 -> StateT Racetrack IO Racetrack
 learningOneEpisode [] _ _ = get >>= pure
 learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
   racetrack <- get
@@ -353,4 +357,4 @@ genRaceWorld w h =
   in  theWorld ++ [worldFinishLine]
 
 drawOneRacetrack :: Racetrack -> IO ()
-drawOneRacetrack racetrack = runStateT (genOneEpisode False) racetrack >>= print  
+drawOneRacetrack racetrack = runStateT (genOneEpisode False) racetrack >>= print
