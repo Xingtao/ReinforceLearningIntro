@@ -179,8 +179,8 @@ mkRacetrack (w, h) discount actFailP maxV =
       !saPair = [(s,a) | s <- allStates, a <- allActs]
   in  Racetrack world w h discount actFailP maxV  
                 (M.fromList (zip allStates . repeat $ head allActs)) -- targetP 
-                (M.fromList (zip saPair $ repeat 0.0)) -- Q(s,a)
-                (M.fromList (zip saPair $ repeat 0.0)) -- C(s,a)
+                (M.fromList (zip saPair $ repeat (negate 10.0))) -- Q(s,a)
+                (M.fromList (zip saPair $ repeat 0)) -- C(s,a)
                 allStates allActs
 
 -- generate all possible states, actions
@@ -212,7 +212,6 @@ genOneEpisode bTraining = do
        then pure [(s, a, 0.0)] -- finish episode
        else do
          a' <- liftIO $ getAction bTraining racetrack s'
-         when (bTraining == False) (liftIO (print s >> print a >> print s'))
          ((s, a, negate 1.0) :) <$> goUntilFinish racetrack s' a'
 
 nextState :: Bool -> Racetrack -> RTState -> RTAct -> IO RTState
@@ -235,9 +234,7 @@ nextState bTraing racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
             False ->
               case theWorld!!y'!!x' < 0 of
                 True -> randomStartingPos racetrack
-                False -> do
-                  when (bTraing == False) (print [x, y, x', y', hor, ver, aHor', aVer'])
-                  pure ((x', y'), (hor + aHor', ver + aVer'))
+                False -> pure ((x', y'), (hor + aHor', ver + aVer'))                  
     
 learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double 
                                                  -> StateT Racetrack IO Racetrack
@@ -252,7 +249,7 @@ learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
       !cMap = M.adjust (const c') (s,a) (_cValuesMap racetrack)
       !qMap = M.adjust (const q') (s,a) (_qValuesMap racetrack)      
       !qs = filter (\ (x, _) -> x == s) $ M.keys qMap
-      (s', a') = argmax (fromJust . flip M.lookup qMap) qs
+      !(s', a') = argmax (fromJust . flip M.lookup qMap) qs
       !piMap = M.adjust (const a') s' (_piPolicy racetrack)
       !racetrack' = racetrack & (piPolicy .~ piMap)
                               & (qValuesMap .~ qMap)
@@ -270,9 +267,8 @@ learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
 getSensableActs :: Racetrack -> (Int, Int) -> [RTAct]
 getSensableActs racetrack (hor, ver) =
   let maxV = _maxVelocity racetrack
-  in  filter (\(aHor, aVer) -> (aHor + hor >= negate maxV) &&
-                               (aHor + hor <= maxV) && (aVer + ver <= maxV) &&
-                               (aVer + ver >= negate maxV)
+  in  filter (\(aHor, aVer) -> (aHor + hor <= maxV) && (aVer + ver <= maxV) &&
+                               (aHor + hor >= negate maxV) && (aVer + ver >= negate maxV)
              ) (_acts racetrack)
 
 getAction :: Bool -> Racetrack -> RTState -> IO RTAct
@@ -357,4 +353,4 @@ genRaceWorld w h =
   in  theWorld ++ [worldFinishLine]
 
 drawOneRacetrack :: Racetrack -> IO ()
-drawOneRacetrack racetrack = runStateT (genOneEpisode False) racetrack >>= print
+drawOneRacetrack racetrack = runStateT (genOneEpisode False) racetrack >>= \ (r, _) -> print r

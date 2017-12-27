@@ -19,11 +19,11 @@ test-suite RLIntro-test
   main-is:             TestMain.hs
 
   other-modules:       Utils
-                     --, Chapter2Bandit
+                     , Chapter2Bandit
                      , Chapter3MDP
                      , Chapter4DP
                      , Chapter5MC
-                     , TestChapter2Bandit
+                     --, TestChapter2Bandit
                      , TestChapter3MDP
                      , TestChapter4DP
                      , TestChapter5MC

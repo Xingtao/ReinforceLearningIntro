@@ -113,7 +113,6 @@ doRacetrackTest config = do
   !racetrack' <- loop 0 totalEpisodes racetrack
   putStrLn "racetrack experiment finish. "
   drawOneRacetrack racetrack'
-  -- putStrLn (show $ _piPolicy racetrack)
   threadDelay 100000
   where
   loop count totalEpisode racetrack 
