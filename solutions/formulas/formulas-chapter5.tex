@@ -9,10 +9,14 @@
 %  Exercise 5.3
 \[
   \begin{aligned}
-    Q(s, a) &= \mathbb{E}[R_{t+1} + \gamma V(S_{t+1}) | S_t=s, A_t=a]\\
-    &=\sum_{s',r} p(s',r|s,a) [r + \gamma V(s')]\\
-    &=r(s,a) + \gamma \sum_{s'} p(s'|s,a) \frac {\sum_{t'\in\tau(s')}\rho_{t':T(t')-1}G_{t'}}
-                                                {\sum_{t'\in\tau(s')}\rho_{t':T(t')-1}}
+    Q(s, a) &= \frac {\sum_{t\in\tau(s, a)} \rho_{t:T(t)-1}G_{t}}
+                     {\sum_{t\in\tau(s, a)} \rho_{t:T(t)-1}}, \\
+    &=  \frac {\sum_{t\in\tau(s,a)} \prod_{k=t}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} G_{t}}
+              {\sum_{t\in\tau(s,a)} \prod_{k=t}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} },\\
+    & given \ S_t = s, \ A_t=a  \rightarrow  \pi(A_t=a|S_t=s)=1, \ b(A_t=a|S_t=s)=1 \\
+    &=  \frac {\sum_{t\in\tau(s,a)} \prod_{k=t+1}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} G_{t}}
+              {\sum_{t\in\tau(s,a)} \prod_{k=t+1}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} }, \\
+    &= \frac {\sum_{t\in\tau(s,a)} \rho_{t+1:T(t)-1}G_{t}} {\sum_{t\in\tau(s)} \rho_{t+1:T(t)-1}}
   \end{aligned}
 \]
 
