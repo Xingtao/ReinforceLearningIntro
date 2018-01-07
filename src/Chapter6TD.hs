@@ -95,20 +95,21 @@ toMove DR = (1, 1)
 ------------------------------------------------------------------------------------------
 -- Learning 
 
-runResult :: StateT WindyWorld IO [Int]
-runResult
+runResult :: StateT WindyWorld IO [State]
+runResult = runOneEpisode False (_startPos ww)
 
-step :: StateT WindyWorld IO ()
-step = get >>= runOneEpisode (_startPos ww) >> put
+step :: StateT WindyWorld IO [State]
+step = runOneEpisode True (_startPos ww)
 
 runOneEpisode :: (Int, Int) -> WindyWorld -> StateT WindyWorld IO WindyWorld
-runOneEpisode curPos ww = do
-  case curPost == (_finishPos ww) of
+runOneEpisode s ww = do
+  case s == (_finishPos ww) of
      True -> pure ww
      False -> do
       bExplore <- liftIO $ headOrTail (_epsilon ww)     
-      let candidates = zip (repeat curPos) actions
-          !sa@(s, a) = argmax (fromJust . flip M.lookup (_qValMap ww)) candidates
+      let a | bExplore = 
+            | otherwise = let candidates = zip (repeat curPos) actions 
+                          in  snd $ argmax (fromJust . flip M.lookup (_qValMap ww)) candidates
           (fromJust $ M.lookup sa (_qValMap ww))
 
           qMap = M.adjust (
