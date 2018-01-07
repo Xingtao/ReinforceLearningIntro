@@ -6,9 +6,9 @@
 
 module Chapter6TD
     ( WindyWorld(..)
-    , createWorld
+    , createWindyWorld
     , step
-    , showActionValues
+    , showLearningResult
     ) where
 
 import           Control.Monad
@@ -34,67 +34,43 @@ data Action = U | D | L | R | UL | UR | DL | DR
   deriving (Show, Ord, Eq)
 actions = [U, D, L, R, UL, UR, DL, DR]
 
+type State = (Int, Int)
+type SAMap = M.Map (State, Action) Double
+
 data WindyWorld = WindyWorld {
-    _stateValues :: Values
-  , _width :: Policy
+  -- params
+    _width :: Policy
   , _height :: Double
   , _epsilon :: Double -- epsilon - greedy select
   , _stepSize :: Double -- epsilon - greedy select
+  , _reward :: Double
+  , _startPos :: [Int]
+  , _finishPos :: [Int]
+  , _windyColumns :: [Int]
+  -- Learnings
+  , _qValMap :: SAMap
 } deriving (Show)
 
 makeLenses ''WindyWorld
 
 ------------------------------------------------------------------------------------------
 -- WindyWorld Operations
+createWindyWorld :: Int -> Int -> Double -> Double -> Double -> 
+                           (Int, Int) -> (Int, Int) -> [Int] -> WindyWorld
+createWindyWorld wWidth wHeight dEpsilon dStepSize dReward aStartPos aFinishPos aWindyCols =
+  let states = [(x,y) | x <- [0..wWidth-1], y <- [0..wHeight-1]]
+      sas = [(s,a) | s <- states, a <- actions]
+      qMap = M.fromList $ zip sas (repeat 0.0)
+  in  WindyWorld wWidth wHeight dEpsilon dStepSize dReward aStartPos aFinishPos aWindyCols qMap
 
-   totalEpisode = 500
-   worldWidth = 10
-   worldHeight = 7
-   epsilon = 0.1
-   stepSize = 0.5
-   reward = -1.0 # reward for each step
-   startPos = [3,0]
-   finishPos = [3,7]
-   windyColumns = [0,0,0,1,1,1,2,2,1,0] # it is length = worldWidth
-}
-createWindyWorld :: Int -> Int -> Double -> Double -> Double ->
-                        -> WindyWorld
-createWindyWorld  = wWidth wHeight dEpsilon dStepSize dReward aStartPos aFinishPos aWindyCols
-
-  let initStateValues = take (size*size) . repeat $ 0.0
-      tableKeys = [((x, y), action) | x <- [0..size-1], y <- [0..size-1], action <- actions]
-      tableValues = doInitTableMap tableKeys
-      tableMap = updateSpecials specials . M.fromList $ zip tableKeys tableValues
-  in  WindyWorld initStateValues tableMap size p gamma
-  where
-  doInitTableMap :: [(StateCoor, Action)] -> [(StateCoor, Reward)]
-  doInitTableMap [] = []
-  doInitTableMap (x@(s, a) : xs)
-    | isOutOfRange size s (toMove a) = (s, negate 1) : doInitTableMap xs
-    | otherwise = ((fst s + fst (toMove a), (snd s + snd (toMove a))), 0) : doInitTableMap xs
-  
-  updateSpecials :: [(StateCoor, StateCoor, Reward)] -> SAPairMap -> SAPairMap
-  updateSpecials [] table = table
-  updateSpecials (x@(s, s', r) : xs) table =
-    updateSpecials xs $ foldl (\ t a -> M.adjust (const (s', r)) (s, a) t) table actions
-
--- output in github markdown format
-showStateValues :: Int -> Values -> String
-showStateValues size values = 
-  let header = (concat . take size $ repeat "| ") ++ "|\n"      
-      alignHeader = (concat . take size $ repeat "|:-----:") ++ "|\n"      
-  in  header ++ alignHeader ++ (showRows (splitAt size values))
-  where
-  showRows ([], _) = "|\n"
-  showRows (row, others) =
-    (concat $ map (\ x -> "|" ++ (printf "%7.2f" x :: String)) row) ++ "|\n" ++ 
-             (showRows $ splitAt size others)
+showLearningResult :: String
+showLearningResult  = 
 
 ------------------------------------------------------------------------------------------
 -- Helpers
-isOutOfRange :: Int -> StateCoor -> (Int, Int) -> Bool
-isOutOfRange maxSize s@(x, y) (x', y')
-  | x + x' < 0 || x + x' >= maxSize || y + y' < 0 || y + y' >= maxSize = True
+isOutOfRange :: (Int, Int) -> StateCoor -> (Int, Int) -> Bool
+isOutOfRange (w, h) s@(x, y) (x', y')
+  | x + x' < 0 || x + x' >= w || y + y' < 0 || y + y' >= h = True
   | otherwise = False
 
 valueOfState :: Values -> StateCoor -> Int -> Double
@@ -111,26 +87,34 @@ toMove U = (0, negate 1)
 toMove D = (0, 1)
 toMove L = (negate 1, 0)
 toMove R = (1, 0)
+toMove UL = (negate 1, negate 1)
+toMove UR = (1, negate 1)
+toMove DL = (negate 1, 1)
+toMove DR = (1, 1)
 
 ------------------------------------------------------------------------------------------
 -- Learning 
 
-step :: State WindyWorld Double
-step = do
-  w <- get
-  let w' = updateState w
-  put w'
-  let convergeDiff = maximum $ zipWith ((abs .) . (-)) (_stateValues w) (_stateValues w')
-  pure convergeDiff
+runResult :: StateT WindyWorld IO [Int]
+runResult
 
-updateState :: WindyWorld -> WindyWorld
-updateState w =
-  let size = _maxSize w
-      table = _tableMap w
-      values = _stateValues w
-      stateIdxs = [(x, y) | x <- [0..size-1], y <- [0..size-1]]
-      stateIdxs' = sortOn snd stateIdxs
-      updateValues = map (go table values size) stateIdxs'
+step :: StateT WindyWorld IO ()
+step = get >>= runOneEpisode (_startPos ww) >> put
+
+runOneEpisode :: (Int, Int) -> WindyWorld -> StateT WindyWorld IO WindyWorld
+runOneEpisode curPos ww = do
+  case curPost == (_finishPos ww) of
+     True -> pure ww
+     False -> do
+      bExplore <- liftIO $ headOrTail (_epsilon ww)     
+      let candidates = zip (repeat curPos) actions
+          !sa@(s, a) = argmax (fromJust . flip M.lookup (_qValMap ww)) candidates
+          (fromJust $ M.lookup sa (_qValMap ww))
+
+          qMap = M.adjust (
+      !piMap = M.adjust (const a') s' (_piPolicy racetrack)  
+      runOneEpisode curPos' ww = do
+
   in  w {_stateValues = updateValues}
   where
   go :: SAPairMap -> Values -> Int -> StateCoor -> Double

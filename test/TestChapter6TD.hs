@@ -34,14 +34,14 @@ testChapter6 configPath = do
 doWindyGridWorldTest :: Config -> IO () 
 doWindyGridWorldTest config = do
   (totalEpisodes::Int) <- require config "windyGridWorld.totalEpisodes"
-  (width::Int) <- require config "windyGridWorld.worldWidth"
-  (height::Int) <- require config "windyGridWorld.worldHeight"
-  (epsilon::Double) <- require config "windyGridWorld.epsilon"
-  (reward::Double) <- require config "windyGridWorld.reward"  
-  (stepSize::Double) <- require config "windyGridWorld.stepSize"
-  (startPos::[Int]) <- require config "windyGridWorld.startPos"
-  (finishPos::[Int]) <- require config "windyGridWorld.finishPos"
-  (windyColumns::[Int]) <- require config "windyGridWorld.windyColumns"
+  (wWidth::Int) <- require config "windyGridWorld.worldWidth"
+  (wHeight::Int) <- require config "windyGridWorld.worldHeight"
+  (dEpsilon::Double) <- require config "windyGridWorld.epsilon"
+  (dReward::Double) <- require config "windyGridWorld.reward"  
+  (dStepSize::Double) <- require config "windyGridWorld.stepSize"
+  (aStartPos::[Int]) <- require config "windyGridWorld.startPos"
+  (aFinishPos::[Int]) <- require config "windyGridWorld.finishPos"
+  (aindyColumns::[Int]) <- require config "windyGridWorld.windyColumns"
   
   let specials = zipWith3 (\ src dst r -> ((src!!0, src!!1), (dst!!0, dst!!1), r))
                                           specialPositions specialTransitPos specialRewards

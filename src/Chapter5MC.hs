@@ -133,14 +133,10 @@ getSumViaFixedPolicy standSum = foldl go (0, 0)
 -- helpers
 -- draws with replacement, for randomElement return pure RVar(no memory)
 nextCard :: IO Int
-nextCard = sample (randomElement [1..13]) >>= \ a -> pure (min a 10)
+nextCard = randomFromRange (1,1,13) >>= \ a -> pure (min a 10)
 
 useAce :: Int -> Bool
 useAce num = (num > 0) ? (True, False)
-
--- epsilon greedy, also random select Hit or Stick
-headOrTail :: Double -> IO Bool
-headOrTail eps = sample $ bernoulli eps
 
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------

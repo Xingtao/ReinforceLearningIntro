@@ -11,6 +11,7 @@ import Data.Ord (comparing)
 import Data.Random
 import Data.Random.Distribution
 import Data.Random.Source.IO
+import Data.Random.Distribution.Bernoulli (bernoulli)
 
 -- | generate a list of values via a provided random distribution
 generateRandomList :: (Num a) => Int -> RVar a -> IO [a]
@@ -42,6 +43,14 @@ minElement = zipWith (\ x y -> (x <= y) ? (x, y))
 argmax :: (Ord b) => (a -> b) -> [a] -> a
 argmax f []= error $ "'argmax' with empty list input"
 argmax f (x:xs) = foldl' cmp x xs where cmp x y = (f x > f y) ? (x, y)
+
+----------------------------------------------------------------------
+-- epsilon greedy, also random select Hit or Stick
+headOrTail :: Double -> IO Bool
+headOrTail eps = sample $ bernoulli eps
+
+randomFromRange :: (Enum a, Num a) => (a, a, a) -> IO a
+randomFromRange (s, i, e) = sample (randomElement [s,(s+i)..e])
 
 {-
 import System.Random
