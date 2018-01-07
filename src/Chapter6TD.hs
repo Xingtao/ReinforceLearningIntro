@@ -32,34 +32,35 @@ import Utils
 -- defs
 data Action = U | D | L | R | UL | UR | DL | DR 
   deriving (Show, Ord, Eq)
-
 actions = [U, D, L, R, UL, UR, DL, DR]
-
-type Values = [Double]
-type Reward = Double
-type StateCoor = (Int, Int)
-type SAPairMap = M.Map (StateCoor, Action) (StateCoor, Reward)
 
 data WindyWorld = WindyWorld {
     _stateValues :: Values
-  , _tableMap :: SAPairMap
-  , _maxSize :: Int
-  , _policy :: Policy
-  , _discount :: Double
+  , _width :: Policy
+  , _height :: Double
+  , _epsilon :: Double -- epsilon - greedy select
+  , _stepSize :: Double -- epsilon - greedy select
 } deriving (Show)
 
 makeLenses ''WindyWorld
 
-instance Read Policy where
-  readsPrec _ "random" = [(PolicyRandom, "")]
-  readsPrec _ "optimal" = [(PolicyOptimal, "")]
-  readsPrec _ _ = error "Unknown policy"
-
 ------------------------------------------------------------------------------------------
 -- WindyWorld Operations
 
-createWindyWorld :: Int -> Policy -> Double -> [(StateCoor, StateCoor, Reward)] -> WindyWorld
-createWindyWorld size p gamma specials = 
+   totalEpisode = 500
+   worldWidth = 10
+   worldHeight = 7
+   epsilon = 0.1
+   stepSize = 0.5
+   reward = -1.0 # reward for each step
+   startPos = [3,0]
+   finishPos = [3,7]
+   windyColumns = [0,0,0,1,1,1,2,2,1,0] # it is length = worldWidth
+}
+createWindyWorld :: Int -> Int -> Double -> Double -> Double ->
+                        -> WindyWorld
+createWindyWorld  = wWidth wHeight dEpsilon dStepSize dReward aStartPos aFinishPos aWindyCols
+
   let initStateValues = take (size*size) . repeat $ 0.0
       tableKeys = [((x, y), action) | x <- [0..size-1], y <- [0..size-1], action <- actions]
       tableValues = doInitTableMap tableKeys
