@@ -52,7 +52,6 @@ headOrTail eps = sample $ bernoulli eps
 randomFromRange :: (Enum a, Num a) => (a, a, a) -> IO a
 randomFromRange (s, i, e) = sample (randomElement [s,(s+i)..e])
 
-
 ----------------------------------------------------------------------
 -- tuple manipulate
 mapTuple :: (a -> b) -> (a, a) -> (b, b)
