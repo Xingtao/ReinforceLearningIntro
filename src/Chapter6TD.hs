@@ -25,7 +25,7 @@ import           Text.Printf
 import Utils
 
 ------------------------------------------------------------------------------------------
--- | WindyWorld
+-- | Stochastic WindyWorld With King's Move
 --   Sarsa On-Policy Learning
 
 ------------------------------------------------------------------------------------------
@@ -94,38 +94,60 @@ toMove DR = (1, 1)
 
 ------------------------------------------------------------------------------------------
 -- Learning 
+   
+step :: StateT WindyWorld IO [State]
+step = do
+  ww <- get
+  a <- liftIO $ takeAction True ww (_startPos ww)
+  runOneEpisode ww True (_startPos ww) a
+  
+runOneEpisode :: WindyWorld -> Bool -> State -> Action -> StateT WindyWorld IO [State]
+runOneEpisode ww bLearning s a = do
+  case s == (_finishPos ww) of
+     True -> put ww >> pure [s]
+     False -> do
+       s' <- liftIO $ stateTransit ww s a
+       a' <- liftIO $ takeAction bLearning ww s'
+       let r | s' == (_finishPos ww) = 0
+             | otherwise = _reward ww
+           q = fromJust $ M.lookup (s,a) (_qValMap ww)
+           qNext = fromJust $ M.lookup (s',a') (_qValMap ww)
+           q' = q + (_stepSize ww) * (r + 1.0 * qNext - q)
+           qMap' = M.adjust (const q') (s,a) (_qValMap ww)
+       (s' :) <$> runOneEpisode (ww {_qValMap = qMap'}) bLearning s' a'
 
+-- run
 runResult :: StateT WindyWorld IO [State]
 runResult = runOneEpisode False (_startPos ww)
 
-step :: StateT WindyWorld IO [State]
-step = runOneEpisode True (_startPos ww)
+------------------------------------------------------------------------------------------
+---- 
+takeAction :: Bool -> WindyWorld -> State -> IO Action
+takeAction bLearning ww s = do
+  let candidates = zip (repeat s) actions 
+      greedyAction = snd $ argmax (fromJust . flip M.lookup (_qValMap ww)) candidates
+  case bLearning  of
+    False -> pure greedyAction
+    True -> do
+      bExplore <- liftIO $ headOrTail (_epsilon ww)
+      case bExplore of
+        False -> pure greedyAction
+        True -> do
+          actIdx <- randomFromRange (0,1,(length actions - 1))
+          pure (actions !! actIdx)
 
-runOneEpisode :: (Int, Int) -> WindyWorld -> StateT WindyWorld IO WindyWorld
-runOneEpisode s ww = do
-  case s == (_finishPos ww) of
-     True -> pure ww
-     False -> do
-      bExplore <- liftIO $ headOrTail (_epsilon ww)     
-      let a | bExplore = 
-            | otherwise = let candidates = zip (repeat curPos) actions 
-                          in  snd $ argmax (fromJust . flip M.lookup (_qValMap ww)) candidates
-          (fromJust $ M.lookup sa (_qValMap ww))
-
-          qMap = M.adjust (
-      !piMap = M.adjust (const a') s' (_piPolicy racetrack)  
-      runOneEpisode curPos' ww = do
-
-  in  w {_stateValues = updateValues}
-  where
-  go :: SAPairMap -> Values -> Int -> StateCoor -> Double
-  go table values size s =
-    case _policy w of
-      PolicyRandom -> -- Bellman Equation
-        sum $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
-                          in  0.25 * (r + (_discount w) * (valueOfState values s' size))
-                  ) actions
-      PolicyOptimal -> -- Bellman Optimality Equation
-        maximum $ map (\ a -> let (s', r) = fromJust $ M.lookup (s, a) table
-                              in  r + (_discount w) * (valueOfState values s' size)
-                      ) actions
+stateTransit :: WindyWorld -> State -> Action -> IO State
+stateTransit ww s a = do
+  windyChange <- randomFromRange ((negate 1),0,1)
+  let windyAct = (0, windyChange + (_windyColumns !! (fst s)))
+  pure $ toNextState (_width ww, _height ww) s (addTuple windyAct a)
+  
+toNextState :: (Int, Int) -> State -> Action -> State
+toNextState (w, h) (x, y) (ax', ay')
+  let x' | x + ax' < 0 = 0
+         | x + ax' >= w = w - 1
+         | otherwise = x + ax'
+      y' | y + ay' < 0 = 0
+         | y + ay' >= w = w - 1
+         | otherwise = y + ay'
+  pure (x', y')

@@ -13,20 +13,20 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
-test-suite RLIntro-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test src
+executable RLIntro-test
   main-is:             TestMain.hs
-
+  hs-source-dirs:      test src
   other-modules:       Utils
                      , Chapter2Bandit
                      , Chapter3MDP
                      , Chapter4DP
                      , Chapter5MC
+                     , Chapter6TD
                      --, TestChapter2Bandit
                      , TestChapter3MDP
                      , TestChapter4DP
                      , TestChapter5MC
+                     , TestChapter6TD
   
   build-depends:       base >= 4.7 && < 5
                      , random >= 1.1

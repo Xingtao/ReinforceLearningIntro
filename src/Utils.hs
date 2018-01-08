@@ -52,6 +52,15 @@ headOrTail eps = sample $ bernoulli eps
 randomFromRange :: (Enum a, Num a) => (a, a, a) -> IO a
 randomFromRange (s, i, e) = sample (randomElement [s,(s+i)..e])
 
+
+----------------------------------------------------------------------
+-- tuple manipulate
+mapTuple :: (a -> b) -> (a, a) -> (b, b)
+mapTuple f (a, b) = (f a, f b)
+
+addTuple :: Num a => (a, a) -> (a, a) -> (a, a)
+addTuple (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
+
 {-
 import System.Random
 -- 'Psuedo' Random Distributions

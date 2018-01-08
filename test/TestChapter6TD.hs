@@ -74,5 +74,4 @@ doWindyGridWorldTest config = do
                percent = floor (100.0 / (diff / learningAccuracy))
            when (ticked < percent) (tickN pg (fromInteger $ percent - ticked))
            loop pg w' (count + 1)
-         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))
-      
+         True -> complete pg >> (putStr $ showStateValues (_maxSize w') (_stateValues w'))      
