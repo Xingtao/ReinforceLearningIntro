@@ -40,17 +40,21 @@ doWindyGridWorldTest config = do
   let windyWorld = createWindyWorld wWidth wHeight dEpsilon dStepSize dReward
                      (aStartPos!!0, aStartPos!!1) (aFinishPos!!0, aFinishPos!!1) aWindyCols
   print "Start Stochastic WindyWorld With King's Move Experiment (Sarsa On-Policy Learning)"
-  windyWorld' <- doTraining 0 totalEpisodes windyWorld
+  windyWorld' <- doTraining 1 totalEpisodes 0 windyWorld
   trace <- evalStateT runLearningResult windyWorld'  
   print (length trace) >> print trace
   pure ()
   where
-  doTraining :: Int -> Int -> WindyWorld -> IO WindyWorld
-  doTraining count totalEpisodes windyWorld = do
+  doTraining :: Int -> Int -> Int -> WindyWorld -> IO WindyWorld
+  doTraining count totalEpisodes totalSteps windyWorld = do
     case count >= totalEpisodes of
       True -> print "learning finish" >> pure windyWorld
       False -> do
-        print $ "Episode " ++ (show count)
-        execStateT step windyWorld >>= doTraining (count+1) totalEpisodes
+        -- execStateT step windyWorld >>= doTraining (count+1) totalEpisodes
+        (trace, ww') <- runStateT step windyWorld
+        let totalSteps' = totalSteps + (length trace)
+        print ( "Episode " ++ (show count) ++ ": average steps " ++
+                (show $ fromIntegral totalSteps / fromIntegral count))
+        doTraining (count+1) totalEpisodes totalSteps' ww'
 
  
