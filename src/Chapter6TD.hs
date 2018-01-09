@@ -28,7 +28,8 @@ import Utils
 
 ------------------------------------------------------------------------------------------
 -- | Stochastic WindyWorld With King's Move
---   Sarsa On-Policy Learning Or Q Off-Policy Learning
+--   Sarsa On-Policy Learning, Q Off-Policy Learning
+--   (ExpectSarsa Off-Policy Learning is the same as Q since target policy is greedy)
 
 ------------------------------------------------------------------------------------------
 -- defs
@@ -38,7 +39,7 @@ actions = [U, D, L, R, UL, UR, DL, DR]
 
 type WWState = (Int, Int)
 type SAMap = M.Map (WWState, Action) Double
-data LearningMethod = QL | SarsaL
+data LearningMethod = QLM | SarsaLM | ExpectSarsaLM
   deriving (Show, Eq, Ord)
 
 data WindyWorld = WindyWorld {
@@ -76,7 +77,7 @@ createWindyWorld learningMethod wWidth wHeight dEpsilon
 step :: StateT WindyWorld IO [WWState]
 step = do
   ww <- get
-  a <- liftIO $ takeAction True ww (_startPos ww)
+  (a, _) <- liftIO $ takeAction ww (_startPos ww)
   runOneEpisode ww True (_startPos ww) a
   
 runOneEpisode :: WindyWorld -> Bool -> WWState -> Action -> StateT WindyWorld IO [WWState]
@@ -85,38 +86,38 @@ runOneEpisode ww bLearning s a = do
      True -> put ww >> pure []
      False -> do
        !s' <- liftIO $ stateTransit ww s (toMove a)
-       !a' <- liftIO $ takeAction (bLearning && (_learnMethod ww == SarsaL)) ww s'
-       let !r | s' == (_finishPos ww) = 0
+       !(a', greedyAct) <- liftIO $ takeAction ww s'
+       let !updateAct | bLearning == False || (_learnMethod ww /= SarsaLM) = greedyAct
+                      | otherwise = a'
+           !r | s' == (_finishPos ww) = 0
               | otherwise = _reward ww
            !q = fromJust $ M.lookup (s,a) (_qValMap ww)
-           !qNext = fromJust $ M.lookup (s',a') (_qValMap ww)
+           !qNext = fromJust $ M.lookup (s',updateAct) (_qValMap ww)
            !q' = q + (_stepSize ww) * (r + 1.0 * qNext - q)
            !qMap' = M.adjust (const q') (s,a) (_qValMap ww)
            !ww' = ww {_qValMap = qMap'}
+       -- still using epsilon-greedy as behave target
        (s' :) <$> runOneEpisode ww' bLearning s' a'
 
 -- run
 runLearningResult :: StateT WindyWorld IO [WWState]
 runLearningResult = do
   ww <- get
-  a <- liftIO $ takeAction False ww (_startPos ww)
-  runOneEpisode ww False (_startPos ww) a
+  (_, greedyAct) <- liftIO $ takeAction ww (_startPos ww)
+  runOneEpisode ww False (_startPos ww) greedyAct
 
 ------------------------------------------------------------------------------------------
 ---- 
-takeAction :: Bool -> WindyWorld -> WWState -> IO Action
-takeAction bLearning ww s = do
+takeAction :: WindyWorld -> WWState -> IO (Action, Action)
+takeAction ww s = do
   let candidates = zip (repeat s) actions 
       greedyAction = snd $ argmax (fromJust . flip M.lookup (_qValMap ww)) candidates
-  case bLearning  of
-    False -> pure greedyAction
+  bExplore <- headOrTail (_epsilon ww)
+  case bExplore of
+    False -> pure (greedyAction, greedyAction)
     True -> do
-      bExplore <- liftIO $ headOrTail (_epsilon ww)
-      case bExplore of
-        False -> pure greedyAction
-        True -> do
-          actIdx <- randomFromRange (0,1,(length actions - 1))
-          pure (actions !! actIdx)
+     actIdx <- randomFromRange (0, 1, (length actions - 1))
+     pure ((actions !! actIdx), greedyAction)
 
 stateTransit :: WindyWorld -> WWState -> (Int, Int) -> IO WWState
 stateTransit ww s a = do
@@ -139,8 +140,9 @@ toNextState (w, h) (x, y) (ax', ay') =
 ------------------------------------------------------------------------------------------
 -- Helpers
 toLearningMethod :: String -> LearningMethod
-toLearningMethod "Q" = QL
-toLearningMethod "Sarsa" = SarsaL
+toLearningMethod "Q" = QLM
+toLearningMethod "Sarsa" = SarsaLM
+toLearningMethod "ExpectSarsa" = ExpectSarsaLM
 toLearningMethod _ = error "not correct learning method"
 
 toMove :: Action -> (Int, Int)
