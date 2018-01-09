@@ -28,6 +28,7 @@ testChapter6 configPath = do
  
 doWindyGridWorldTest :: Config -> IO () 
 doWindyGridWorldTest config = do
+  (learningMethod::String) <- require config "windyGridWorld.learningMethod"
   (totalEpisodes::Int) <- require config "windyGridWorld.totalEpisodes"
   (wWidth::Int) <- require config "windyGridWorld.worldWidth"
   (wHeight::Int) <- require config "windyGridWorld.worldHeight"
@@ -37,7 +38,7 @@ doWindyGridWorldTest config = do
   (aStartPos::[Int]) <- require config "windyGridWorld.startPos"
   (aFinishPos::[Int]) <- require config "windyGridWorld.finishPos"
   (aWindyCols::[Int]) <- require config "windyGridWorld.windyColumns"
-  let windyWorld = createWindyWorld wWidth wHeight dEpsilon dStepSize dReward
+  let windyWorld = createWindyWorld learningMethod wWidth wHeight dEpsilon dStepSize dReward
                      (aStartPos!!0, aStartPos!!1) (aFinishPos!!0, aFinishPos!!1) aWindyCols
   print "Start Stochastic WindyWorld With King's Move Experiment (Sarsa On-Policy Learning)"
   windyWorld' <- doTraining 1 totalEpisodes 0 windyWorld

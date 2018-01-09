@@ -28,7 +28,7 @@ import Utils
 
 ------------------------------------------------------------------------------------------
 -- | Stochastic WindyWorld With King's Move
---   Sarsa On-Policy Learning
+--   Sarsa On-Policy Learning Or Q Off-Policy Learning
 
 ------------------------------------------------------------------------------------------
 -- defs
@@ -38,10 +38,13 @@ actions = [U, D, L, R, UL, UR, DL, DR]
 
 type WWState = (Int, Int)
 type SAMap = M.Map (WWState, Action) Double
+data LearningMethod = QL | SarsaL
+  deriving (Show, Eq, Ord)
 
 data WindyWorld = WindyWorld {
   -- params
-    _width :: Int
+    _learnMethod :: LearningMethod
+  , _width :: Int
   , _height :: Int
   , _epsilon :: Double -- epsilon - greedy select
   , _stepSize :: Double -- epsilon - greedy select
@@ -57,13 +60,15 @@ makeLenses ''WindyWorld
 
 ------------------------------------------------------------------------------------------
 -- WindyWorld Operations
-createWindyWorld :: Int -> Int -> Double -> Double -> Double -> 
-                           WWState -> WWState -> [Int] -> WindyWorld
-createWindyWorld wWidth wHeight dEpsilon dStepSize dReward aStartPos aFinishPos aWindyCols =
+createWindyWorld :: String -> Int -> Int -> Double -> Double -> Double -> 
+                              WWState -> WWState -> [Int] -> WindyWorld
+createWindyWorld learningMethod wWidth wHeight dEpsilon
+                 dStepSize dReward aStartPos aFinishPos aWindyCols =
   let states = [(x,y) | x <- [0..wWidth-1], y <- [0..wHeight-1]]
       sas = [(s,a) | s <- states, a <- actions]
       qMap = M.fromList $ zip sas (repeat 0.0)
-  in  WindyWorld wWidth wHeight dEpsilon dStepSize dReward aStartPos aFinishPos aWindyCols qMap
+  in  WindyWorld (toLearningMethod learningMethod) wWidth wHeight
+                 dEpsilon dStepSize dReward aStartPos aFinishPos aWindyCols qMap
 
 ------------------------------------------------------------------------------------------
 -- Learning 
@@ -79,9 +84,8 @@ runOneEpisode ww bLearning s a = do
   case s == (_finishPos ww) of
      True -> put ww >> pure []
      False -> do
-       -- liftIO $ print (show s  ++ " -> " ++ show a)
        !s' <- liftIO $ stateTransit ww s (toMove a)
-       !a' <- liftIO $ takeAction bLearning ww s'
+       !a' <- liftIO $ takeAction (bLearning && (_learnMethod ww == SarsaL)) ww s'
        let !r | s' == (_finishPos ww) = 0
               | otherwise = _reward ww
            !q = fromJust $ M.lookup (s,a) (_qValMap ww)
@@ -134,6 +138,10 @@ toNextState (w, h) (x, y) (ax', ay') =
 
 ------------------------------------------------------------------------------------------
 -- Helpers
+toLearningMethod :: String -> LearningMethod
+toLearningMethod "Q" = QL
+toLearningMethod "Sarsa" = SarsaL
+toLearningMethod _ = error "not correct learning method"
 
 toMove :: Action -> (Int, Int)
 toMove U = (0, negate 1)
