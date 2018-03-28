@@ -34,7 +34,7 @@ import           Utils
 ------------------------------------------------------------------------------------------
 
 -- | Bandit Problem
---   Three methods (Policies): epcilong-greedy, UCB, gradient bandit.
+--   Three methods (Policies): epsilon-greedy, UCB, gradient bandit.
 --   Policy includes two parts: action selection & state-value estimation update.
 
 -- | For action selections (exploit & explore) of above methods:
@@ -105,7 +105,7 @@ selectOneAction = do
       if bExplore then liftIO $ sample (randomElement [0..((_kArms bandit) - 1)])
          else pure . fst . maxWithIndex $ (zip [0..] (_qValues bandit))
     UCB c -> do
-      let !ucbEstValues = zipWith (calcUCB (_curStep bandit)) (_nActions bandit) (_qValues bandit)
+      let !ucbEstValues = zipWith (calcUCB c (_curStep bandit)) (_nActions bandit) (_qValues bandit)
       pure $ fst $ maxWithIndex (zip [0..] ucbEstValues)
     Gradient _ -> do
       let gradientValues = map exp (_qValues bandit)
@@ -118,8 +118,8 @@ selectOneAction = do
       -- pure $ fst $ maxWithIndex (zip [0..] gradientProbs)
   pure actionN
   where
-  calcUCB :: Int -> Int -> Double -> Double
-  calcUCB total n val = val + sqrt ((log $ fromIntegral total) / fromIntegral n)
+  calcUCB :: Double -> Int -> Int -> Double -> Double
+  calcUCB c total n val = val + c * sqrt ((log $ fromIntegral total) / fromIntegral n)
   
 takeOneAction :: Int -> StateT Bandit IO Double
 takeOneAction actionN = do
