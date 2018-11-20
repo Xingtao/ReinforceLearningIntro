@@ -66,9 +66,9 @@ blackjackStep count = do
   blackjack <- get
   dealerCards <- liftIO $ replicateM 21 nextCard -- at most 21 cards
   playerCards <- liftIO $ replicateM 21 nextCard
-  -- player first (explode first ...)  
+  -- player first (explode first ...)
   let (dealerSum, _) = getSumViaFixedPolicy 17 dealerCards
-  trajectories <- liftIO $ generatePlayerTrajectory 
+  trajectories <- liftIO $ generatePlayerTrajectory
                                blackjack count (head dealerCards) (0,0) playerCards
   let (playerSum, _, _) = fst $ last trajectories
       !reward | playerSum < 0 = negate 1.0
@@ -91,12 +91,12 @@ blackjackStep count = do
 generatePlayerTrajectory :: Blackjack -> Int -> Int -> (Int, Int) -> [Int] -> IO [SAPair]
 generatePlayerTrajectory _ _ _ _ [] = pure []
 generatePlayerTrajectory blackjack count dfc (playerSum, aceNum) (x:xs)
-  | playerSum < 11 && x == 1 = generatePlayerTrajectory 
+  | playerSum < 11 && x == 1 = generatePlayerTrajectory
                                    blackjack count dfc (playerSum + 11, aceNum+ 1) xs
   | playerSum <= 11 = generatePlayerTrajectory blackjack count dfc (playerSum + x, aceNum) xs
   | playerSum == 21 = pure [((21, dfc, useAce aceNum), Stick)]
   | playerSum > 21 = if (aceNum > 0)
-                        then generatePlayerTrajectory 
+                        then generatePlayerTrajectory
                                  blackjack count dfc (playerSum - 10, aceNum - 1) (x:xs)
                         else pure [((negate 1, dfc, False), Stick)] -- blow up
   | playerSum < 21 = do
@@ -115,7 +115,7 @@ epsilonGreedyAct blackjack count s = do
       let (_, hitVal) = fromJust $ M.lookup (s, Hit) (_qValues blackjack)
           (_, standVal) = fromJust $ M.lookup (s, Stick) (_qValues blackjack)
       pure ((hitVal > standVal) ? (Hit, Stick))
-                       
+
 --------------------------------------------------------------------------------
 -- dealer policy: will stick when sum >= 17
 getSumViaFixedPolicy :: Int -> [Int] -> (Int, Int)
@@ -159,22 +159,22 @@ data Racetrack = Racetrack {
     ,_piPolicy :: M.Map RTState RTAct -- a deterministic policy
     ,_qValuesMap :: M.Map RTSA Double
     ,_cValuesMap :: M.Map RTSA Double
-    ,_states :: [RTState]   
-    ,_acts :: [RTAct]   
+    ,_states :: [RTState]
+    ,_acts :: [RTAct]
     } deriving (Show)
 
 makeLenses ''Racetrack
 
 ------------------------------------------------------------------------------------------
--- Init racetrack 
+-- Init racetrack
 mkRacetrack :: (Int, Int) -> Double -> Double -> Int -> Racetrack
 mkRacetrack (w, h) discount actFailP maxV =
   let !world = genRaceWorld w h
       !allStates = genAllStates world w h maxV
       !allActs = [(aHor, aVer) | aHor <- [-1,0,1], aVer <- [-1,0,1]]
       !saPair = [(s,a) | s <- allStates, a <- allActs]
-  in  Racetrack world w h discount actFailP maxV  
-                (M.fromList (zip allStates . repeat $ head allActs)) -- targetP 
+  in  Racetrack world w h discount actFailP maxV
+                (M.fromList (zip allStates . repeat $ head allActs)) -- targetP
                 (M.fromList (zip saPair $ repeat (negate 10.0))) -- Q(s,a)
                 (M.fromList (zip saPair $ repeat 0)) -- C(s,a)
                 allStates allActs
@@ -182,14 +182,14 @@ mkRacetrack (w, h) discount actFailP maxV =
 -- generate all possible states, actions
 -- filter out according to world ? Right now no, won't depend on world's boundary
 genAllStates :: [[Int]] -> Int -> Int -> Int -> [RTState]
-genAllStates world w h maxV = 
-  [((x,y), (hor,ver)) | x <- [0..w-1], y <- [0..h-1], 
+genAllStates world w h maxV =
+  [((x,y), (hor,ver)) | x <- [0..w-1], y <- [0..h-1],
                         hor <- [(negate maxV)..maxV], ver <- [(negate maxV)..maxV],
                         world!!y!!x >= 0]
-  
+
 ------------------------------------------------------------------------------------------
 -- step function
-racetrackStep :: StateT Racetrack IO Racetrack 
+racetrackStep :: StateT Racetrack IO Racetrack
 racetrackStep = genOneEpisode True >>= (\ x -> learningOneEpisode (reverse x) 0.0 1.0)
 
 -- generate via random behavior policy
@@ -204,7 +204,7 @@ genOneEpisode bTraining = do
                              -> StateT Racetrack IO [(RTState, RTAct, Double)]
   goUntilFinish racetrack s a = do
     s'@((_, y), _) <- liftIO $ nextState bTraining racetrack s a
-    if y == (_wh racetrack) - 1 
+    if y == (_wh racetrack) - 1
        then pure [(s, a, 0.0)] -- finish episode
        else do
          a' <- liftIO $ getAction bTraining racetrack s'
@@ -230,9 +230,9 @@ nextState bTraing racetrack ((x,y), (hor,ver)) (aHor, aVer) = do
             False ->
               case theWorld!!y'!!x' < 0 of
                 True -> randomStartingPos racetrack
-                False -> pure ((x', y'), (hor + aHor', ver + aVer'))                  
-    
-learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double 
+                False -> pure ((x', y'), (hor + aHor', ver + aVer'))
+
+learningOneEpisode :: [(RTState, RTAct, Double)] -> Double -> Double
                                                  -> StateT Racetrack IO Racetrack
 learningOneEpisode [] _ _ = get >>= pure
 learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
@@ -243,7 +243,7 @@ learningOneEpisode ((s@(p,v), a, r) : ss) g w = do
       !c' = c + w -- C_n+1 = C_n + W_n+1
       !q' = q + w/c'*(g'- q) -- Q_n+1 = Q_n + W_n+1/C_n+1*(G_n - Q_n)
       !cMap = M.adjust (const c') (s,a) (_cValuesMap racetrack)
-      !qMap = M.adjust (const q') (s,a) (_qValuesMap racetrack)      
+      !qMap = M.adjust (const q') (s,a) (_qValuesMap racetrack)
       !qs = filter (\ (x, _) -> x == s) $ M.keys qMap
       !(s', a') = argmax (fromJust . flip M.lookup qMap) qs
       !piMap = M.adjust (const a') s' (_piPolicy racetrack)
@@ -273,7 +273,7 @@ getAction bTraing racetrack s@(p, v) = do
     False -> pure . fromJust $ M.lookup s (_piPolicy racetrack)
     True -> do
       let senseActs = getSensableActs racetrack v
-      case null senseActs of 
+      case null senseActs of
          True -> pure (0, 0)
          False -> do
            idx <- sample (randomElement [0..(length senseActs - 1)])
@@ -283,7 +283,7 @@ randomStartingPos :: Racetrack -> IO RTState
 randomStartingPos racetrack = do
   let theWorld = _world racetrack
   let startings = filter (\ ((x, y), (hor, ver)) ->
-                            y == 0 && (theWorld !! y !! x == 0) && hor == 0 && ver == 0 
+                            y == 0 && (theWorld !! y !! x == 0) && hor == 0 && ver == 0
                          ) (_states racetrack)
   randomIdx <- sample (randomElement [0..(length startings - 1)])
   pure (startings !! randomIdx)
@@ -318,7 +318,7 @@ randomStartingPos racetrack = do
 -}
 
 genRaceWorld :: Int -> Int -> [[Int]]
-genRaceWorld w h =  
+genRaceWorld w h =
   let tenthWidth = w `div` 10
       fifthHeight = h `div` 5
       unitBarrier = replicate tenthWidth (negate 1)

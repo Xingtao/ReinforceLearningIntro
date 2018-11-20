@@ -41,7 +41,7 @@ import           Utils
 -- | Dynamic Programming Experiments: Car Rental
 --   States: number of cars in each location, represents as: Seq [Int]
 --   Actions: number of cars Transferred between locations, represents as: Seq (Seq [[Int]])
---   Returns: rental credit, transfer cost, parking cost, additional saveings, represents as: double
+--   Returns: rental credit, transfer cost, parking cost, additional savings, represents as: double
 
 ------------------------------------------------------------------------------------------
 data CarRental = CarRental {
@@ -76,7 +76,7 @@ mkCarRental :: Int -> Double -> Double -> [Int] -> [Double] -> [Double] -> [Int]
                       [Int] -> [Double] -> [Double] -> [Double] -> [Double] -> CarRental
 mkCarRental nLocations theTheta gamma maxCarNums earns
             transCost maxTrans freeLimit parkFee savings rent return =
-  CarRental nLocations theTheta gamma maxCarNums earns 
+  CarRental nLocations theTheta gamma maxCarNums earns
             transCost maxTrans freeLimit parkFee savings rent return
             (Seq.fromList allStates) initActions
             (Seq.fromList $ map Seq.fromList possibleActions) stateVals
@@ -90,7 +90,7 @@ mkCarRental nLocations theTheta gamma maxCarNums earns
   -- NOTE: ignore poisson probability < 1% (take as 0)
   rentPoissonDist =
     zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.001) .
-                                map (\ n -> (n, prob lambda n)) $ [0..maxN]) rent maxCarNums 
+                                map (\ n -> (n, prob lambda n)) $ [0..maxN]) rent maxCarNums
   returnPoissonDist =
     zipWith (\ lambda maxN -> filter (\ (n, p) -> p > 0.001) .
                                 map (\ n -> (n, prob lambda n)) $ [0..maxN]) return maxCarNums
@@ -108,7 +108,7 @@ showCarRentalResult carRental =
   concat . toList $ Seq.zipWith4
     (\ s actionIdx saPair val ->
        show s ++ " -> " ++ (show $ Seq.index saPair actionIdx) ++ " -> " ++ show val ++ "\n")
-    (_states carRental) (_actions carRental) 
+    (_states carRental) (_actions carRental)
     (_possibleActions carRental) (_stateValues carRental)
 
 -- generate all states for multiple locations
@@ -210,10 +210,10 @@ calcOneActionTransition carRental stateIdx s a rents returns =
       base = (rentIncomes - transferFees) +
              (_discount carRental) * ((_stateValues carRental) `Seq.index` finalStateIndex)
       parkingFee = sum $ zipWith3 (\ s limit fee -> (s > limit) ? (fee, 0))
-                                  sFinal (_freeParkingLimit carRental) 
+                                  sFinal (_freeParkingLimit carRental)
                                   (_additionalParkingCost carRental)
       transferSaving = sum $ zipWith (\ transfers saving -> (sum transfers > 0) ? (saving, 0))
-                                     a (_additionalTransferSaving carRental)      
+                                     a (_additionalTransferSaving carRental)
   in  base - parkingFee + transferSaving
 
 -----------------------------------------------------------------------------------------
@@ -229,7 +229,7 @@ policyImprovement carRental = do
       diffs = toList $ Seq.zipWith (-) oldActions newActions
       percent = round (  ((100.0 *) . fromIntegral . length $ filter (== 0) diffs)
                        / (fromIntegral $ length newActions))
-      !zero = trace ("=======> percent: " ++ show percent) 0 
+      !zero = trace ("=======> percent: " ++ show percent) 0
       carRental' = carRental & (actions .~ newActions)
   put carRental'
   if percent >= 100
@@ -248,11 +248,11 @@ data Gambler = Gambler {
   , stateVals :: VU.Vector Double
   , stateActs :: VU.Vector Int
   } deriving (Show)
-  
+
 mkGambler :: Double -> Double -> Int -> Gambler
-mkGambler prob theTheta gamblerGoal = 
+mkGambler prob theTheta gamblerGoal =
   Gambler prob theTheta gamblerGoal
-          (VU.fromList (take gamblerGoal (repeat 0.0) ++ [1.0])) 
+          (VU.fromList (take gamblerGoal (repeat 0.0) ++ [1.0]))
           (VU.fromList (take gamblerGoal $ repeat 0))
 
 ------------------------------------------------------------------------------------------
@@ -265,7 +265,7 @@ gamblerValueIteration :: Gambler -> State Gambler Gambler
 gamblerValueIteration gambler = do
   let gambler' = runValueIteration gambler
   put gambler' >> pure gambler'
-    
+
 runValueIteration :: Gambler -> Gambler
 runValueIteration gambler = runST $ do
   mutStates <- VU.thaw (stateVals gambler)
@@ -289,4 +289,4 @@ runValueIteration gambler = runST $ do
     let (a, v) = maxWithIndex (zip [0..] returns)
     VUM.write mutStateVals index v
     VUM.write mutActVlas index a
-    pure (mutStateVals, mutActVlas)  
+    pure (mutStateVals, mutActVlas)

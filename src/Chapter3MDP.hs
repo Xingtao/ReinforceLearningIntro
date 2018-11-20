@@ -66,7 +66,7 @@ instance Read Policy where
 -- World Operations
 
 createWorld :: Int -> Policy -> Double -> [(StateCoor, StateCoor, Reward)] -> World
-createWorld size p gamma specials = 
+createWorld size p gamma specials =
   let initStateValues = take (size*size) . repeat $ 0.0
       tableKeys = [((x, y), action) | x <- [0..size-1], y <- [0..size-1], action <- actions]
       tableValues = doInitTableMap tableKeys
@@ -78,7 +78,7 @@ createWorld size p gamma specials =
   doInitTableMap (x@(s, a) : xs)
     | isOutOfRange size s (toMove a) = (s, negate 1) : doInitTableMap xs
     | otherwise = ((fst s + fst (toMove a), (snd s + snd (toMove a))), 0) : doInitTableMap xs
-  
+
   updateSpecials :: [(StateCoor, StateCoor, Reward)] -> SAPairMap -> SAPairMap
   updateSpecials [] table = table
   updateSpecials (x@(s, s', r) : xs) table =
@@ -86,14 +86,14 @@ createWorld size p gamma specials =
 
 -- output in github markdown format
 showStateValues :: Int -> Values -> String
-showStateValues size values = 
-  let header = (concat . take size $ repeat "| ") ++ "|\n"      
-      alignHeader = (concat . take size $ repeat "|:-----:") ++ "|\n"      
+showStateValues size values =
+  let header = (concat . take size $ repeat "| ") ++ "|\n"
+      alignHeader = (concat . take size $ repeat "|:-----:") ++ "|\n"
   in  header ++ alignHeader ++ (showRows (splitAt size values))
   where
   showRows ([], _) = "|\n"
   showRows (row, others) =
-    (concat $ map (\ x -> "|" ++ (printf "%7.2f" x :: String)) row) ++ "|\n" ++ 
+    (concat $ map (\ x -> "|" ++ (printf "%7.2f" x :: String)) row) ++ "|\n" ++
              (showRows $ splitAt size others)
 
 ------------------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ toMove L = (negate 1, 0)
 toMove R = (1, 0)
 
 ------------------------------------------------------------------------------------------
--- Learning 
+-- Learning
 
 step :: State World Double
 step = do
