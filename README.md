@@ -1,5 +1,4 @@
-##### Selected Exercise Solutions & Code for ___"Reinforcement Leraning Introduction - 
-Second Edition"___ by Sutton & Barto  [Full Pdf](http://www.incompleteideas.net/book/the-book.html)
+##### Selected Exercise Solutions & Code for ___"Reinforcement Leraning Introduction - Second Edition"___ by Sutton & Barto  [Full Pdf](http://www.incompleteideas.net/book/the-book.html)
 
 
 ***
