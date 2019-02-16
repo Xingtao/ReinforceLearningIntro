@@ -9,8 +9,17 @@
 %  Exercise 6.1
 \[
   \begin{aligned}
-    \text{When V is updated during the episode, }\delta_t \text{ will be calculdated using updated Vt}
-    \noindent G_t - V (S_t) &= R_{t+1} + \gamma G_{t+1} - V_t(S_t) + \gamma V(S_{t+1}) - \gamma V(S_{t+1})
+    \text{When V is }& \text{updated during the episode, }\delta_t \text{ will be calculdated using updated Vt}\\
+    G_t - V (S_t) &= R_{t+1} + \gamma G_{t+1} - V_t(S_t) + \gamma V(S_{t+1}) - \gamma V(S_{t+1})\\
+    &= \delta_t + \gamma (G_{t+1} - V_t(S_{t+1})) + \gamma (V_{t+1}(S_{t+1}) - V_{t+1}(S_{t+1}))\\
+    &= \delta_t + \gamma (G_{t+1} - V_{t+1}(S_{t+1})) + \gamma (V_{t+1}(S_{t+1}) - V_t(S_{t+1}))\\
+    &= \delta_t + \gamma (V_{t+1}(S_{t+1}) - V_t(S_{t+1})) + \delta_{t+1} + \gamma^{2} (V_{t+2}(S_{t+2}) - V_{t+1}(S_{t+2})) +\\ 
+    &\quad\quad \gamma^{2}(G_{t+2} - V_{t+2}(S_{t+2}))\\
+    &= \delta_t + \gamma (V_{t+1}(S_{t+1}) - V_t(S_{t+1})) + \delta_{t+1} + \gamma^{2} (V_{t+2}(S_{t+2}) - V_{t+1}(S_{t+2})) + ... + \\
+    &\quad\quad \delta_{T-1} + \gamma^{T-t} (V_{T}(S_{T}) - V_{T-1}(S_{T})) + \gamma^{T-t}(G_{T} - V_{T}(S_{T}))\\
+    &= \delta_t + \gamma (V_{t+1}(S_{t+1}) - V_t(S_{t+1})) + \delta_{t+1} + \gamma^{2} (V_{t+2}(S_{t+2}) - V_{t+1}(S_{t+2})) + ... + \\
+    &\quad\quad \delta_{T-1} + \gamma^{T-t} (V_{T}(S_{T}) - V_{T-1}(S_{T})) + \gamma^{T-t}(0 - 0)\\
+    &= \sum_{k=t}^{T-1} \gamma^{k-t} \delta_k + \sum_{k=t+1}^{T} \gamma^{k-t} (V_{k}(S_{k}) - V_{k-1}(S_{k}))\\
   \end{aligned}
 \]
 
