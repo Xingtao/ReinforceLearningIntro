@@ -1,0 +1,53 @@
+% Formulas for your convinence
+\documentclass{article}
+\usepackage{latexsym,bm,amsmath,amssymb}
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Chapter 5
+
+%  Exercise 5.3
+\[
+  \begin{aligned}
+    Q(s, a) &= \frac {\sum_{t\in\tau(s, a)} \rho_{t:T(t)-1}G_{t}}
+                     {\sum_{t\in\tau(s, a)} \rho_{t:T(t)-1}}, \\
+    &=  \frac {\sum_{t\in\tau(s,a)} \prod_{k=t}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} G_{t}}
+              {\sum_{t\in\tau(s,a)} \prod_{k=t}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} },\\
+    & given \ S_t = s, \ A_t=a  \rightarrow  \pi(A_t=a|S_t=s)=1, \ b(A_t=a|S_t=s)=1 \\
+    &=  \frac {\sum_{t\in\tau(s,a)} \prod_{k=t+1}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} G_{t}}
+              {\sum_{t\in\tau(s,a)} \prod_{k=t+1}^{T-1} \frac {\pi(A_k|S_k)} {b(A_k|S_k)} }, \\
+    &= \frac {\sum_{t\in\tau(s,a)} \rho_{t+1:T(t)-1}G_{t}} {\sum_{t\in\tau(s)} \rho_{t+1:T(t)-1}}
+  \end{aligned}
+\]
+
+%  Exercise 5.5
+\[
+  \begin{aligned}
+    &\text{ For every-visit MC, the expected square of importance-sampling scaled return for a state s is: } \\
+    &\qquad \quad\ \mathbb{E}_b[\sum_{t'\in\tau(s)}(\prod_{t=t'}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2]\\
+    &\qquad \ = \mathbb{E}_b[(\prod_{t=0}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2] \ + \
+                \mathbb{E}_b[\sum_{t'\in\tau(s), t'\not=0}(\prod_{t=t'}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2]\\
+    &\qquad >=  \mathbb{E}_b[(\prod_{t=0}^{T-1} \frac {\pi(A_t|S_t)} {b(A_t|S_t)})^2] \ \ \ (1) \\
+    &\text{ It is proven that (1) has infinite variance, so the variance for every-visit MC estimator is still infinite.} \\
+  \end{aligned}
+\]
+
+%  Exercise 5.7
+\[
+  \begin{aligned}
+    V_{n+1} &\overset {.} {=} \frac {\sum_{k=1}^{n} W_k G_k} {\sum_{k=1}^{n} W_k}, \ \ n \geq 1 \\
+    &= \frac {\sum_{k=1}^{n-1} W_k G_k + W_nG_n} {\sum_{k=1}^{n} W_k} \\
+    &= \frac {\frac {\sum_{k=1}^{n-1} W_k G_k + W_nG_n} {\sum_{k=1}^{n-1} W_k}}
+             {\frac {\sum_{k=1}^{n} W_k} {\sum_{k=1}^{n-1} W_k}}\\
+    &= \frac {V_n + \frac {W_nG_n} {\sum_{k=1}^{n-1} W_k}}
+             {\frac {\sum_{k=1}^{n} W_k} {\sum_{k=1}^{n-1} W_k}}\\
+   &= \frac {\sum_{k=1}^{n-1} W_k V_n} {\sum_{k=1}^{n} W_k} + \frac {W_nG_n} {\sum_{k=1}^{n} W_k} \\
+   &= \frac {\sum_{k=1}^{n-1} W_k V_n} {\sum_{k=1}^{n} W_k} +
+      (\frac {W_n V_n} {\sum_{k=1}^{n} W_k} - \frac {W_n V_n} {\sum_{k=1}^{n} W_k}) +
+      \frac {W_nG_n} {\sum_{k=1}^{n} W_k} \\
+   &= V_n + \frac {W_n(G_n - V_n)} {\sum_{k=1}^{n} W_k} \\
+   &= V_n + \frac {W_n} {C_n}[G_n - V_n], \ \ C_{n+1} \overset {.} {=} C_n + W_{n+1}
+  \end{aligned}
+\]
+
+\end{document}
