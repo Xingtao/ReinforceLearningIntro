@@ -1,4 +1,4 @@
-`Exercise 6.1`
+
 ```
 Exercise 6.1 If V changes during the episode, then (6.6) only holds approximately; what
 would the di↵erence be between the two sides? Let V t denote the array of state values
