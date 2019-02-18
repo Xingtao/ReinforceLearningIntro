@@ -26,4 +26,7 @@ changed? By exactly how much was it changed?
 ```
 Exercise 6.7 Design an off-policy version of the TD(0) update that can be used with arbitrary target policy and covering behavior policy b, using at each step t the importance sampling ratio  \rho_t:t (5.3).
 ```
+> ![](figures/exercise_6-7.png "Exercise 6.7")
+
+
 
