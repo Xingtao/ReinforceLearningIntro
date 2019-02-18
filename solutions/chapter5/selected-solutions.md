@@ -22,7 +22,7 @@ are the first-visit and every-visit estimators of the value of the nonterminal s
 > ![](figures/exercise_5-5.png "Exercise 5.5")
 
 ```
-Exercise 5.6 What is the equation analogous to (5.6) for action values Q(s, a) instead of
-state values V (s), again given returns generated using b?
+Exercise 5.10 Derive the weighted-average update rule (5.8) from (5.7). Follow the
+pattern of the derivation of the unweighted rule (2.3).
 ```
-> ![](figures/exercise_5-6.png "Exercise 5.6")
+> ![](figures/exercise_5-10.png "Exercise 5.10")
