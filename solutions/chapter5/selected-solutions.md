@@ -1,23 +1,21 @@
 ```
-Exercise 5.3 What is the backup diagram for Monte Carlo estimation of q ?
+Exercise 5.6 What is the equation analogous to (5.6) for action values Q(s, a) instead of
+state values V (s), again given returns generated using b?
 ```
 > ![](figures/exercise_5-3.png "Exercise 5.3")
 
 ```
-Exercise 5.4 The pseudocode for Monte Carlo ES is inefficient because, for each state–
-action pair, it maintains a list of all returns and repeatedly calculates their mean. It would
-be more efficient to use techniques similar to those explained in Section 2.4 to maintain
-just the mean and a count (for each state–action pair) and update them incrementally.
-Describe how the pseudocode would be altered to achieve this.
+Exercise 5.7 In learning curves such as those shown in Figure 5.3 error generally decreases
+with training, as indeed happened for the ordinary importance-sampling method. But for
+the weighted importance-sampling method error first increased and then decreased. Why
+do you think this happened?
 ```
 > Weighted importance-sampling has bias towards Vb and Vb is a random policy, so its error increases for the initial episodes.
 
 ```
-Exercise 5.5 Consider an MDP with a single nonterminal state and a single action
-that transitions back to the nonterminal state with probability p and transitions to the
-terminal state with probability 1 p. Let the reward be +1 on all transitions, and let
-= 1. Suppose you observe one episode that lasts 10 steps, with a return of 10. What
-are the first-visit and every-visit estimators of the value of the nonterminal state?
+Exercise 5.8 The results with Example 5.5 and shown in Figure 5.4 used a first-visit MC
+method. Suppose that instead an every-visit MC method was used on the same problem.
+Would the variance of the estimator still be infinite? Why or why not?
 ```
 > ![](figures/exercise_5-5.png "Exercise 5.5")
 
