@@ -2,7 +2,7 @@
 Exercise 5.6 What is the equation analogous to (5.6) for action values Q(s, a) instead of
 state values V (s), again given returns generated using b?
 ```
-> ![](figures/exercise_5-3.png "Exercise 5.3")
+> ![](figures/exercise_5-6.png "Exercise 5.6")
 
 ```
 Exercise 5.7 In learning curves such as those shown in Figure 5.3 error generally decreases
@@ -17,7 +17,7 @@ Exercise 5.8 The results with Example 5.5 and shown in Figure 5.4 used a first-v
 method. Suppose that instead an every-visit MC method was used on the same problem.
 Would the variance of the estimator still be infinite? Why or why not?
 ```
-> ![](figures/exercise_5-5.png "Exercise 5.5")
+> ![](figures/exercise_5-8.png "Exercise 5.8")
 
 ```
 Exercise 5.10 Derive the weighted-average update rule (5.8) from (5.7). Follow the
